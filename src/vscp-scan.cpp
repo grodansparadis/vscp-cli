@@ -289,7 +289,7 @@ main(int argc, char **argv)
       f.nickname  = nick;
       f.eventGuid = guidString(e.GUID);
       f.guid      = guidString(d);
-      f.mdfUrl    = urlString(d + 16, (size_t) std::max(0, std::min(size - 16, 32)));
+      f.mdfUrl    = urlString(d + 16, (size_t) (std::max)(0, (std::min)(size - 16, 32)));
       f.complete  = true;
     }
     else if (slow && (l1 || l1o2) && (VSCP_TYPE_PROTOCOL_RW_RESPONSE == e.vscp_type) && (size >= 2) &&

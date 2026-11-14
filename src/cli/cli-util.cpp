@@ -215,7 +215,7 @@ sleepMs(uint32_t ms)
     if (now >= end) {
       break;
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(std::min<uint64_t>(end - now, 50)));
+    std::this_thread::sleep_for(std::chrono::milliseconds((std::min<uint64_t>)(end - now, 50)));
   }
 }
 

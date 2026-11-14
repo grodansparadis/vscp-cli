@@ -203,9 +203,9 @@ The driver is loaded at run time. The driver's documentation describes its
 configuration.
 
 ```bash
-vscp-scan -i canal --driver /usr/lib/vscp/drivers/level1/vscpl1drv-can4vscp.so \
+vscp-scan -i canal --driver /var/lib/vscp/drivers/level1/vscpl1drv-can4vscp.so \
           --driver-config "/dev/ttyUSB0;125"
-vscp-dump -i level2 --driver /usr/lib/vscp/drivers/level2/libvscpl2drv-socketcan.so \
+vscp-dump -i level2 --driver /var/lib/vscp/drivers/level2/libvscpl2drv-socketcan.so \
           --driver-config /etc/vscp/socketcan.json
 ```
 

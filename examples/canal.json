@@ -1,6 +1,6 @@
 {
   "type": "canal",
-  "path": "/usr/lib/vscp/drivers/level1/vscpl1drv-can4vscp.so",
+  "path": "/var/lib/vscp/drivers/level1/vscpl1drv-can4vscp.so",
   "config": "/dev/ttyUSB0;125",
   "flags": 0
 }
