@@ -128,6 +128,13 @@ if(NOT MOSQUITTO_FOUND)
   message(FATAL_ERROR "libmosquitto was not found")
 endif()
 
+# Newer libmosquitto headers include cjson/cJSON.h. Homebrew keeps it in
+# its own include folder, which is not on the compiler's search path.
+find_path(CJSON_INCLUDE_DIR cjson/cJSON.h HINTS /opt/homebrew/include /usr/local/include)
+if(CJSON_INCLUDE_DIR)
+  list(APPEND MOSQUITTO_INCLUDE_DIRS ${CJSON_INCLUDE_DIR})
+endif()
+
 # The VSCP library selects OpenSSL API variants from these
 foreach(_ssl_ver 1.0 1.1 3.0 3.1 3.2)
   string(FIND "${OPENSSL_VERSION}" "${_ssl_ver}" _ssl_pos)

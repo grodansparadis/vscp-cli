@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: brew install expat mosquitto openssl@3 ninja
+        run: brew install cjson expat mosquitto openssl@3 ninja
 
       - name: Configure
         run: |

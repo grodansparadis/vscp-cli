@@ -10,6 +10,10 @@
 // SPDX-License-Identifier: MIT
 //
 
+#ifdef _WIN32
+#include <pch.h> // windows.h etc. before the VSCP headers
+#endif
+
 #include <cstdio>
 #include <cstring>
 #include <fstream>
