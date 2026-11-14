@@ -1,0 +1,8 @@
+{
+  "type": "ws2",
+  "url": "wss://vscp.example.com:8884/ws2",
+  "user": "admin",
+  "password": "secret",
+  "key": "2DBB079A38985AF00EBEEFE22F9FFA0E",
+  "cafile": "/etc/vscp/certs/ca.crt"
+}

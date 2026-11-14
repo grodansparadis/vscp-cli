@@ -1,0 +1,6 @@
+# Events for vscp-send --file, one per line. VSCP string format
+# (head,class,type,obid,datetime,timestamp,GUID,data...) or JSON.
+# A '-' GUID means all zero (the interface GUID is used).
+0,20,3,0,,0,-,0,1,2
+96,10,6,0,,0,-,0x89,0x81,0x00,0xE6
+{"class": 30, "type": 5, "head": 0, "guid": "-", "data": [7, 8]}

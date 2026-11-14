@@ -1,0 +1,16 @@
+{
+  "type": "mqtt",
+  "host": "broker.example.com",
+  "port": 8883,
+  "user": "vscp",
+  "password": "secret",
+  "tls": {
+    "capath": "/etc/ssl/certs"
+  },
+  "subscribe": [
+    { "topic": "vscp/#", "qos": 1, "format": "auto" }
+  ],
+  "publish": [
+    { "topic": "vscp/{{guid}}/{{class}}/{{type}}", "qos": 1, "bretain": false, "format": "json" }
+  ]
+}

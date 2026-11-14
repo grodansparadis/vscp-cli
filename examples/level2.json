@@ -1,0 +1,6 @@
+{
+  "type": "level2",
+  "path-driver": "/usr/lib/vscp/drivers/level2/libvscpl2drv-socketcan.so",
+  "path-config": "/etc/vscp/socketcan.json",
+  "guid": "FF:FF:FF:FF:FF:FF:FF:F5:00:00:00:00:00:00:00:00"
+}

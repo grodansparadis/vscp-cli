@@ -1,0 +1,5 @@
+{
+  "type": "socketcan",
+  "device": "can0",
+  "flags": 0
+}

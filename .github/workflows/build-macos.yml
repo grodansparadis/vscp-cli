@@ -1,0 +1,58 @@
+name: macOS
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  macos:
+    name: macOS arm64
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install expat mosquitto openssl@3 ninja
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix expat);$(brew --prefix mosquitto)"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Install
+        run: |
+          cmake --install build --prefix "${{ github.workspace }}/staging"
+          tar -C "${{ github.workspace }}/staging" -czf "${{ github.workspace }}/vscp-cli-macos-arm64.tar.gz" .
+
+      - name: Write SHA256SUMS
+        id: sha256sums
+        continue-on-error: true
+        shell: bash
+        run: |
+          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-macos-arm64" <<'SHA256SUMS_PATTERNS'
+          vscp-cli-macos-arm64.tar.gz
+          SHA256SUMS_PATTERNS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vscp-cli-macos-arm64
+          path: |
+            vscp-cli-macos-arm64.tar.gz
+            ${{ steps.sha256sums.outputs.file }}
+          if-no-files-found: error
