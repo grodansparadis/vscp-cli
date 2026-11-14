@@ -16,13 +16,13 @@
 
 namespace vscpcli {
 
-enum class OutputFormat { TEXT, STRING, JSON, XML, CSV };
+enum class OutputFormat { FMT_TEXT, FMT_STRING, FMT_JSON, FMT_XML, FMT_CSV };
 
 enum class TimeMode {
-  ABSOLUTE, // Local wall clock time when received
-  DELTA,    // Time since the previous event
-  ZERO,     // Time since the first event
-  NONE
+  TIME_ABSOLUTE, // Local wall clock time when received
+  TIME_DELTA,    // Time since the previous event
+  TIME_ZERO,     // Time since the first event
+  TIME_NONE
 };
 
 bool

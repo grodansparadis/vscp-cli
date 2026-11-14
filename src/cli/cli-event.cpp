@@ -25,15 +25,15 @@ parseOutputFormat(const std::string &str, OutputFormat &fmt)
 {
   std::string s = lower(str);
   if ("text" == s)
-    fmt = OutputFormat::TEXT;
+    fmt = OutputFormat::FMT_TEXT;
   else if ("string" == s)
-    fmt = OutputFormat::STRING;
+    fmt = OutputFormat::FMT_STRING;
   else if ("json" == s)
-    fmt = OutputFormat::JSON;
+    fmt = OutputFormat::FMT_JSON;
   else if ("xml" == s)
-    fmt = OutputFormat::XML;
+    fmt = OutputFormat::FMT_XML;
   else if ("csv" == s)
-    fmt = OutputFormat::CSV;
+    fmt = OutputFormat::FMT_CSV;
   else
     return false;
   return true;
@@ -44,13 +44,13 @@ parseTimeMode(const std::string &str, TimeMode &mode)
 {
   std::string s = lower(str);
   if (("a" == s) || ("absolute" == s))
-    mode = TimeMode::ABSOLUTE;
+    mode = TimeMode::TIME_ABSOLUTE;
   else if (("d" == s) || ("delta" == s))
-    mode = TimeMode::DELTA;
+    mode = TimeMode::TIME_DELTA;
   else if (("z" == s) || ("zero" == s))
-    mode = TimeMode::ZERO;
+    mode = TimeMode::TIME_ZERO;
   else if (("n" == s) || ("none" == s))
-    mode = TimeMode::NONE;
+    mode = TimeMode::TIME_NONE;
   else
     return false;
   return true;
@@ -81,8 +81,8 @@ initEvent(vscpEventEx &ex, uint8_t priority)
 std::string
 EventFormatter::header(void) const
 {
-  if (OutputFormat::CSV == m_fmt) {
-    return std::string(TimeMode::NONE == m_time ? "" : "time,") + "head,class,type,obid,guid,size,data";
+  if (OutputFormat::FMT_CSV == m_fmt) {
+    return std::string(TimeMode::TIME_NONE == m_time ? "" : "time,") + "head,class,type,obid,guid,size,data";
   }
   return "";
 }
@@ -98,18 +98,18 @@ EventFormatter::timeField(void)
   char buf[40];
   std::string s;
   switch (m_time) {
-    case TimeMode::ABSOLUTE:
+    case TimeMode::TIME_ABSOLUTE:
       s = localTimeString();
       break;
-    case TimeMode::DELTA:
+    case TimeMode::TIME_DELTA:
       snprintf(buf, sizeof(buf), "%10.3f", (now - m_last) / 1000.0);
       s = buf;
       break;
-    case TimeMode::ZERO:
+    case TimeMode::TIME_ZERO:
       snprintf(buf, sizeof(buf), "%10.3f", (now - m_first) / 1000.0);
       s = buf;
       break;
-    case TimeMode::NONE:
+    case TimeMode::TIME_NONE:
       break;
   }
   m_last = now;
@@ -125,7 +125,7 @@ EventFormatter::format(const vscpEventEx &evIn)
 
   switch (m_fmt) {
 
-    case OutputFormat::TEXT: {
+    case OutputFormat::FMT_TEXT: {
       cguid guid;
       guid.getFromArray(ex.GUID);
       char buf[128];
@@ -150,11 +150,11 @@ EventFormatter::format(const vscpEventEx &evIn)
       break;
     }
 
-    case OutputFormat::STRING:
+    case OutputFormat::FMT_STRING:
       vscp_convertEventExToString(out, &ex);
       break;
 
-    case OutputFormat::JSON: {
+    case OutputFormat::FMT_JSON: {
       std::string str;
       vscp_convertEventExToJSON(str, &ex);
       try {
@@ -166,7 +166,7 @@ EventFormatter::format(const vscpEventEx &evIn)
       break;
     }
 
-    case OutputFormat::XML:
+    case OutputFormat::FMT_XML:
       vscp_convertEventExToXML(out, &ex);
       for (auto &c : out) {
         if (('\n' == c) || ('\r' == c)) {
@@ -175,11 +175,11 @@ EventFormatter::format(const vscpEventEx &evIn)
       }
       break;
 
-    case OutputFormat::CSV: {
+    case OutputFormat::FMT_CSV: {
       cguid guid;
       guid.getFromArray(ex.GUID);
       char buf[64];
-      if (TimeMode::NONE != m_time) {
+      if (TimeMode::TIME_NONE != m_time) {
         out = trim(t) + ",";
       }
       snprintf(buf, sizeof(buf), "%u,%u,%u,%u,", ex.head, ex.vscp_class, ex.vscp_type, ex.obid);

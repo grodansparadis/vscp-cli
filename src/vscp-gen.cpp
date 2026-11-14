@@ -34,7 +34,7 @@ using namespace vscpcli;
 
 // A value that is fixed, random or (for data) incrementing
 struct Spec {
-  enum Mode { FIXED, RANDOM, INCREMENT } mode = RANDOM;
+  enum Mode { SPEC_FIXED, SPEC_RANDOM, SPEC_INCREMENT } mode = SPEC_RANDOM;
   uint64_t value                               = 0;
 };
 
@@ -43,14 +43,14 @@ parseSpec(const std::string &v, uint64_t max, Spec &spec, bool allowIncrement = 
 {
   std::string s = lower(v);
   if ("r" == s) {
-    spec.mode = Spec::RANDOM;
+    spec.mode = Spec::SPEC_RANDOM;
     return true;
   }
   if (allowIncrement && ("i" == s)) {
-    spec.mode = Spec::INCREMENT;
+    spec.mode = Spec::SPEC_INCREMENT;
     return true;
   }
-  spec.mode = Spec::FIXED;
+  spec.mode = Spec::SPEC_FIXED;
   return parseUnsigned(v, max, spec.value);
 }
 
@@ -110,7 +110,7 @@ main(int argc, char **argv)
              if (("r" == s) || ("i" == s)) {
                return parseSpec(v, 0, data, true);
              }
-             data.mode = Spec::FIXED;
+             data.mode = Spec::SPEC_FIXED;
              fixedData.clear();
              return parseByteList(v, fixedData, err);
            });
@@ -192,7 +192,7 @@ main(int argc, char **argv)
     return rc;
   }
 
-  if ((Spec::FIXED == cls.mode) && isProtocolClass((uint16_t) cls.value) && !allowProtocol) {
+  if ((Spec::SPEC_FIXED == cls.mode) && isProtocolClass((uint16_t) cls.value) && !allowProtocol) {
     fprintf(stderr, "vscp-gen: class %u is a protocol class, add --allow-protocol if you really mean it\n",
             (unsigned) cls.value);
     return EXIT_USAGE;
@@ -200,12 +200,12 @@ main(int argc, char **argv)
 
   // Data length limits
   const uint64_t maxLen = level2 ? 128 : VSCP_LEVEL1_MAXDATA;
-  if ((Spec::FIXED == len.mode) && (Spec::FIXED != data.mode) && (len.value > VSCP_LEVEL1_MAXDATA) && !level2 &&
-      ((Spec::FIXED != cls.mode) || (cls.value < 512))) {
+  if ((Spec::SPEC_FIXED == len.mode) && (Spec::SPEC_FIXED != data.mode) && (len.value > VSCP_LEVEL1_MAXDATA) && !level2 &&
+      ((Spec::SPEC_FIXED != cls.mode) || (cls.value < 512))) {
     fprintf(stderr, "vscp-gen: Level I events have at most 8 data bytes (use --level2)\n");
     return EXIT_USAGE;
   }
-  if ((Spec::FIXED == data.mode) && (fixedData.size() > VSCP_LEVEL2_MAXDATA)) {
+  if ((Spec::SPEC_FIXED == data.mode) && (fixedData.size() > VSCP_LEVEL2_MAXDATA)) {
     fprintf(stderr, "vscp-gen: too much data\n");
     return EXIT_USAGE;
   }
@@ -221,7 +221,7 @@ main(int argc, char **argv)
   std::mt19937_64 rng(seedSet ? seed : std::random_device{}());
   auto rnd = [&](uint64_t lo, uint64_t hi) { return std::uniform_int_distribution<uint64_t>(lo, hi)(rng); };
 
-  EventFormatter fmt(OutputFormat::TEXT, TimeMode::NONE);
+  EventFormatter fmt(OutputFormat::FMT_TEXT, TimeMode::TIME_NONE);
   uint64_t sent    = 0;
   uint64_t counter = 0;
   int failed       = 0;
@@ -229,9 +229,9 @@ main(int argc, char **argv)
   while (g_run && (!count || (sent < count))) {
     for (uint32_t b = 0; g_run && (b < burst) && (!count || (sent < count)); b++) {
       vscpEventEx ex;
-      initEvent(ex, (uint8_t) ((Spec::FIXED == prio.mode) ? prio.value : rnd(0, 7)));
+      initEvent(ex, (uint8_t) ((Spec::SPEC_FIXED == prio.mode) ? prio.value : rnd(0, 7)));
 
-      if (Spec::FIXED == cls.mode) {
+      if (Spec::SPEC_FIXED == cls.mode) {
         ex.vscp_class = (uint16_t) cls.value;
       }
       else {
@@ -239,7 +239,7 @@ main(int argc, char **argv)
           ex.vscp_class = (uint16_t) rnd(0, level2 ? 1023 : 511);
         } while (!allowProtocol && isProtocolClass(ex.vscp_class));
       }
-      ex.vscp_type = (uint16_t) ((Spec::FIXED == type.mode) ? type.value : rnd(0, 255));
+      ex.vscp_type = (uint16_t) ((Spec::SPEC_FIXED == type.mode) ? type.value : rnd(0, 255));
 
       if (guidSet) {
         vscp_setEventExGuidFromString(&ex, guid);
@@ -249,20 +249,20 @@ main(int argc, char **argv)
       bool level1Over2 = (ex.vscp_class >= 512) && (ex.vscp_class < 1024);
       size_t limit     = (ex.vscp_class < 512) ? VSCP_LEVEL1_MAXDATA : maxLen;
 
-      if (Spec::FIXED == data.mode) {
+      if (Spec::SPEC_FIXED == data.mode) {
         ex.sizeData = (uint16_t) fixedData.size();
         if (!fixedData.empty()) {
           memcpy(ex.data, fixedData.data(), fixedData.size());
         }
       }
       else {
-        size_t n = (Spec::FIXED == len.mode) ? (size_t) len.value : (size_t) rnd(0, limit);
-        if (level1Over2 && (Spec::FIXED != len.mode)) {
+        size_t n = (Spec::SPEC_FIXED == len.mode) ? (size_t) len.value : (size_t) rnd(0, limit);
+        if (level1Over2 && (Spec::SPEC_FIXED != len.mode)) {
           n = 16 + (size_t) rnd(0, VSCP_LEVEL1_MAXDATA);
         }
         ex.sizeData = (uint16_t) n;
         for (size_t i = 0; i < n; i++) {
-          if (Spec::INCREMENT == data.mode) {
+          if (Spec::SPEC_INCREMENT == data.mode) {
             ex.data[i] = (i < 8) ? (uint8_t) (counter >> (8 * i)) : 0;
           }
           else {

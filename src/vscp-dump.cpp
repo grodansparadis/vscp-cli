@@ -37,8 +37,8 @@ main(int argc, char **argv)
 {
   ConnectionOptions conn;
 
-  OutputFormat format = OutputFormat::TEXT;
-  TimeMode timeMode   = TimeMode::ABSOLUTE;
+  OutputFormat format = OutputFormat::FMT_TEXT;
+  TimeMode timeMode   = TimeMode::TIME_ABSOLUTE;
   bool timeSet        = false;
   uint64_t count      = 0;
   uint32_t idle       = 0;
@@ -169,8 +169,8 @@ main(int argc, char **argv)
     return rc;
   }
 
-  if (!timeSet && (OutputFormat::CSV == format)) {
-    timeMode = TimeMode::ABSOLUTE;
+  if (!timeSet && (OutputFormat::FMT_CSV == format)) {
+    timeMode = TimeMode::TIME_ABSOLUTE;
   }
 
   vscpEventFilter filter;

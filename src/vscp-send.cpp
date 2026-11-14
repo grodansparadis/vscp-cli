@@ -270,7 +270,7 @@ main(int argc, char **argv)
     linger = 500;
   }
 
-  EventFormatter fmt(OutputFormat::TEXT, TimeMode::NONE);
+  EventFormatter fmt(OutputFormat::FMT_TEXT, TimeMode::TIME_NONE);
   int failed     = 0;
   uint64_t sent  = 0;
   bool first     = true;
