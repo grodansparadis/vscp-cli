@@ -253,6 +253,10 @@ endforeach()
 
 install(TARGETS ${VSCPCLI_TOOLS} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+# Man pages (man/<tool>.1.md, converted with pandoc) in share/man/man1
+include(ManPages)
+vscp_add_man_pages(${PROJECT_SOURCE_DIR}/man)
+
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/examples/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/examples)
 install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
 

@@ -7,6 +7,7 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- Man pages for all six tools, converted from man/<tool>.1.md with pandoc when the tools are built and installed in share/man/man1
 - New command line tools, replacing the old vscpcmd code:
   - `vscp-send`: send events given on the command line, as VSCP string/JSON/XML, or from a file.
   - `vscp-dump`: show received events as text, VSCP string, JSON, XML or CSV, with time stamps, filters and a log file.
