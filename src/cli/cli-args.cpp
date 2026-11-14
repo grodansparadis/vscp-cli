@@ -13,6 +13,9 @@
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+
+#include <nlohmann/json.hpp>
 
 #include <vscp-cli-version.h>
 
@@ -86,13 +89,129 @@ ArgParser::findShort(char c) const
   return nullptr;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// configFileArgs
+//
+// Arguments stored in the configuration file given with -c/--config:
+// "args" for all tools and "<tool name>" for this tool, both arrays of
+// strings (numbers are also accepted). The file is read again later for the
+// interface settings.
+//
+
+bool
+ArgParser::configFileArgs(const std::vector<std::string> &cmd, std::vector<std::string> &args, std::string &error)
+{
+  std::string path;
+  for (size_t i = 0; i < cmd.size(); i++) {
+    const std::string &a = cmd[i];
+    if ("--" == a) {
+      break;
+    }
+    if ((("-c" == a) || ("--config" == a)) && (i + 1 < cmd.size())) {
+      path = cmd[i + 1];
+    }
+    else if (0 == a.compare(0, 9, "--config=")) {
+      path = a.substr(9);
+    }
+    else if ((a.size() > 2) && (0 == a.compare(0, 2, "-c"))) {
+      path = a.substr(2);
+    }
+  }
+  if (path.empty()) {
+    return true;
+  }
+
+  std::ifstream in(path);
+  if (!in) {
+    error = "Unable to open the configuration file " + path;
+    return false;
+  }
+  nlohmann::json j;
+  try {
+    in >> j;
+  }
+  catch (const std::exception &e) {
+    error = "Invalid JSON in " + path + ": " + e.what();
+    return false;
+  }
+  if (!j.is_object()) {
+    return true; // buildClientConfig reports this
+  }
+
+  for (const std::string key : { std::string("args"), m_prog }) {
+    if (!j.contains(key)) {
+      continue;
+    }
+    const auto &list = j[key];
+    if (!list.is_array()) {
+      error = "\"" + key + "\" in " + path + " must be an array of arguments";
+      return false;
+    }
+    for (const auto &item : list) {
+      std::string arg;
+      if (item.is_string()) {
+        arg = item.get<std::string>();
+      }
+      else if (item.is_number_integer()) {
+        arg = std::to_string(item.get<long long>());
+      }
+      else {
+        error = "\"" + key + "\" in " + path + " must hold strings or numbers";
+        return false;
+      }
+      if (("-c" == arg) || ("--config" == arg) || (0 == arg.compare(0, 9, "--config="))) {
+        error = "A configuration file can not name another configuration file";
+        return false;
+      }
+      args.push_back(arg);
+    }
+  }
+  return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// parse
+//
+
 bool
 ArgParser::parse(int argc, char **argv, std::vector<std::string> &positional, std::string &error, bool &exitNow)
 {
   exitNow = false;
-  bool onlyPositional = false;
+  std::vector<std::string> cmd(argv + 1, argv + argc);
 
-  for (int i = 1; i < argc; i++) {
+  // Arguments from the configuration file come first so the command line
+  // can override them. Positional arguments (the command) are taken from
+  // the file only when the command line has none.
+  std::vector<std::string> fileArgs;
+  if (!configFileArgs(cmd, fileArgs, error)) {
+    return false;
+  }
+  std::vector<std::string> filePositional;
+  if (!fileArgs.empty()) {
+    if (!parseList(fileArgs, filePositional, error, exitNow)) {
+      error += " (in the configuration file)";
+      return false;
+    }
+    if (exitNow) {
+      return true;
+    }
+  }
+  if (!parseList(cmd, positional, error, exitNow)) {
+    return false;
+  }
+  if (positional.empty()) {
+    positional = filePositional;
+  }
+  return true;
+}
+
+bool
+ArgParser::parseList(const std::vector<std::string> &argv, std::vector<std::string> &positional, std::string &error, bool &exitNow)
+{
+  bool onlyPositional = false;
+  const int argc      = (int) argv.size();
+
+  for (int i = 0; i < argc; i++) {
     std::string arg = argv[i];
 
     // A lone "-" (stdin) and negative numbers are positional

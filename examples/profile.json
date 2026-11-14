@@ -1,0 +1,14 @@
+{
+  "interface": {
+    "type": "tcpip",
+    "host": "stcp://vscp.example.com:9598",
+    "user": "admin",
+    "btls": true,
+    "cafile": "/etc/vscp/certs/ca.crt"
+  },
+  "args": [ "--response-timeout", 5000 ],
+  "vscp-dump": [ "-f", "json", "-C", "10,15" ],
+  "vscp-send": [ "-p", 3, "20", "3", "0", "1", "2" ],
+  "vscp-reg": [ "-N", 7, "dump", "standard" ],
+  "vscp-scan": [ "--info" ]
+}

@@ -142,6 +142,32 @@ class ConfigTest(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_stored_arguments(self):
+        path = os.path.join(BINDIR, "test-profile.json")
+        with open(path, "w") as f:
+            json.dump({"interface": {"type": "udp", "ip": "10.0.0.255"},
+                       "args": ["--response-timeout", 1234],
+                       "vscp-send": ["-P", "4000", "--print-config"],
+                       "vscp-dump": ["-P", "5000"]}, f)
+        try:
+            # args and the vscp-send list are used; the command line wins
+            c = config("-c", path)
+            self.assertEqual((c["ip"], c["port"]), ("10.0.0.255", 4000))
+            self.assertNotIn("args", c)
+            c = config("-c", path, "-P", "4500")
+            self.assertEqual(c["port"], 4500)
+            # Another tool gets its own list
+            r = run("vscp-dump", "-c", path, "--print-config")
+            self.assertEqual(json.loads(r.stdout)["port"], 5000)
+            # Positional arguments come from the file when none are given
+            with open(path, "w") as f:
+                json.dump({"interface": {"type": "udp"}, "vscp-send": ["20", "3", "1", "2", "3", "4", "5", "6", "7", "8", "9"]}, f)
+            r = run("vscp-send", "-c", path)
+            self.assertEqual(r.returncode, 2)  # 9 data bytes from the file are rejected
+            self.assertIn("at most 8 data bytes", r.stderr)
+        finally:
+            os.remove(path)
+
     def test_password_from_environment(self):
         env = dict(os.environ, VSCP_PASSWORD="fromenv")
         r = run("vscp-send", "-i", "tcpip", "-u", "bob", "--print-config", env=env)

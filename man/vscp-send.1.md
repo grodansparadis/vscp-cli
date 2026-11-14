@@ -65,7 +65,12 @@ These options are the same for all the VSCP command line tools.
 
 **-c**, **\-\-config** *FILE*
 :   JSON file with the settings of the interface's VSCP client and **type**
-    for the interface. Command line options override it.
+    for the interface, or with these in an **interface** object together with
+    stored arguments: **args** (an array of arguments for all tools) and an
+    array named after a tool (for example **vscp-send**) with arguments, the
+    command included, for that tool. The stored arguments come before the
+    command line, so the command line overrides them; positional arguments
+    are taken from the file only when the command line has none.
 
 **\-\-set** *KEY=VALUE*
 :   Set any client setting. The value is JSON if it parses as JSON, text

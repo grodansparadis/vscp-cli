@@ -7,6 +7,7 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- -c/--config can also store arguments: "args" for all tools and an array per tool (for example "vscp-send") with options and the command. The command line overrides them
 - Man pages for all six tools, converted from man/<tool>.1.md with pandoc when the tools are built and installed in share/man/man1
 - New command line tools, replacing the old vscpcmd code:
   - `vscp-send`: send events given on the command line, as VSCP string/JSON/XML, or from a file.

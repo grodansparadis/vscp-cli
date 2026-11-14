@@ -75,6 +75,11 @@ private:
     std::string group;
   };
 
+  bool parseList(const std::vector<std::string> &args,
+                 std::vector<std::string> &positional,
+                 std::string &error,
+                 bool &exitNow);
+  bool configFileArgs(const std::vector<std::string> &cmd, std::vector<std::string> &args, std::string &error);
   void checkUnique(const std::string &longName, char shortName) const;
   const Opt *findLong(const std::string &name) const;
   const Opt *findShort(char c) const;

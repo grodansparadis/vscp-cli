@@ -61,8 +61,10 @@ addConnectionOptions(ArgParser &p, ConnectionOptions &o)
            });
 
   p.option("config", 'c', "FILE",
-           "JSON file with interface settings (the client's own\n"
-           "keys). Command line options override it.",
+           "JSON file with the interface settings (\"interface\"\n"
+           "object) and stored arguments: \"args\" for all tools,\n"
+           "\"<tool name>\" for one tool, e.g. the command.\n"
+           "The command line overrides the file.",
            [&o](const std::string &v, std::string &) {
              o.configFile = v;
              return true;
@@ -389,6 +391,13 @@ buildClientConfig(ConnectionOptions &o, json &cfg, std::string &error)
     if (cfg.contains("interface") && cfg["interface"].is_object()) {
       json sub = cfg["interface"];
       cfg      = sub;
+    }
+    else if (cfg.is_object()) {
+      // Command line arguments stored in the file are not client settings
+      cfg.erase("args");
+      for (const char *tool : { "vscp-send", "vscp-dump", "vscp-gen", "vscp-reg", "vscp-info", "vscp-scan" }) {
+        cfg.erase(tool);
+      }
     }
     if (!cfg.is_object()) {
       error = o.configFile + " must hold a JSON object";

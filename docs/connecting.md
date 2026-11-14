@@ -137,6 +137,36 @@ used directly. The [examples](https://github.com/grodansparadis/vscp-cli/tree/ma
 folder has a file for each interface. They are installed in
 `share/vscp-cli/examples`.
 
+### Stored arguments
+
+The same file can also hold command line arguments, so a whole command can
+be kept in it. `args` is used by every tool, and a key with a tool's name
+(`vscp-send`, `vscp-dump`, `vscp-gen`, `vscp-reg`, `vscp-info`,
+`vscp-scan`) only by that tool. Both are arrays of arguments, exactly as they
+would be typed. The client settings then go in an `interface` object:
+
+```json
+{
+  "interface": { "type": "tcpip", "host": "stcp://vscp.example.com:9598", "btls": true, "cafile": "/etc/vscp/certs/ca.crt" },
+  "args": [ "--response-timeout", 5000 ],
+  "vscp-dump": [ "-f", "json", "-C", "10,15" ],
+  "vscp-send": [ "-p", 3, "20", "3", "0", "1", "2" ],
+  "vscp-reg": [ "-N", 7, "dump", "standard" ]
+}
+```
+
+```bash
+vscp-dump -c site.json            # JSON lines of measurements from the server
+vscp-send -c site.json            # sends the stored event
+vscp-send -c site.json 30 5 0 1 2 # another event, the rest of the settings from the file
+vscp-reg  -c site.json -N 8       # dumps the standard registers of node 8 instead
+```
+
+The stored arguments are read only when `-c` is given. They come before the
+command line, so options on the command line override them. Positional
+arguments (the event, or the command of vscp-reg) are taken from the file only
+when the command line has none.
+
 `--set KEY=VALUE` sets any single client setting. The value is JSON if it
 parses as JSON, otherwise text:
 

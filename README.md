@@ -57,7 +57,13 @@ vscp-dump -i udp -e aes128 --require-encryption
 | `level2` | VSCP Level II driver | |
 
 See [Connecting and security](docs/connecting.md) for all options, JSON
-configuration files and `--print-config`.
+configuration files and `--print-config`. A configuration file given with
+`-c` can also store arguments for all tools and the command of each tool:
+
+```bash
+vscp-dump -c site.json        # interface, TLS and dump options all from site.json
+vscp-reg  -c site.json -N 8   # stored settings, node from the command line
+```
 
 ## Download
 
