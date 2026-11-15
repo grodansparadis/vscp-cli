@@ -25,10 +25,10 @@
 
 #define VSCPCLI_VERSION_YEAR  26
 #define VSCPCLI_VERSION_MONTH 11
-#define VSCPCLI_VERSION_PATCH 3
+#define VSCPCLI_VERSION_PATCH 4
 
-#define VSCPCLI_VERSION_STR   "26.11.3"
-#define VSCPCLI_VERSION       0x1A0B0003UL
+#define VSCPCLI_VERSION_STR   "26.11.4"
+#define VSCPCLI_VERSION       0x1A0B0004UL
 
 #define VSCPCLI_VERSION_CODE(year, month, patch) (((unsigned long) (year) << 24) | ((unsigned long) (month) << 16) | (patch))
 
