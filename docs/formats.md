@@ -99,3 +99,7 @@ vscp-dump -i udp --filter 0,10,0,00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
 ```
 
 The filtering is done by vscp-dump, so it works the same with all interfaces.
+
+---
+
+[filename](./bottom_copyright.md ':include')

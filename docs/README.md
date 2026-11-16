@@ -49,6 +49,9 @@ vscp-info -i socketcan --device can0 -N 7 --mdf
 
 # Set register 0x10 of node 7 to 0x55
 vscp-reg -i socketcan --device can0 -N 7 write 0x10 0x55
+
+# 1000 random events for testing, over multicast
+vscp-gen -i multicast -g 10 -n 1000
 ```
 
 The same commands work over the network, for example through a VSCP daemon
@@ -57,6 +60,18 @@ with TLS and encryption:
 ```bash
 vscp-dump -i tcpip -H vscp.example.com --tls --ca-file ca.crt \
           -e aes128 -k $AESKEY --hmac-key $HMACKEY
+
+# Encrypted UDP, plain datagrams are dropped
+vscp-dump -i udp -e aes128 --require-encryption
+```
+
+The [connection options](connecting.md) page covers all interfaces, TLS and
+encryption, and JSON configuration files that store the settings (and even
+the command) of each tool:
+
+```bash
+vscp-dump -c site.json        # interface, TLS and dump options all from site.json
+vscp-reg  -c site.json -N 8   # stored settings, node from the command line
 ```
 
 ## Exit status

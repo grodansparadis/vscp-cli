@@ -62,3 +62,7 @@ vscp-send -i tcpip -H server --tls --ca-file ca.crt 20 3 0 1 2
 
 0 when all events were sent, 1 when a send failed, 2 for command line
 errors, 3 when the connection failed.
+
+---
+
+[filename](./bottom_copyright.md ':include')

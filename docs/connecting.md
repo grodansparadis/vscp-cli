@@ -244,3 +244,7 @@ vscp-dump -i level2 --driver /var/lib/vscp/drivers/level2/libvscpl2drv-socketcan
 `vscp-reg`, `vscp-info` and `vscp-scan` take `--via GUID`, the GUID of the
 interface on a VSCP server that a node is connected to. The register events
 are then sent as CLASS2.LEVEL1.PROTOCOL to that interface.
+
+---
+
+[filename](./bottom_copyright.md ':include')

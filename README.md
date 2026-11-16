@@ -28,78 +28,28 @@ Windows.
 ## Examples
 
 ```bash
-vscp-dump -i socketcan --device can0                       # everything on the bus
-vscp-send -i socketcan --device can0 30 5 0 1 2            # CLASS1.CONTROL TurnOn, zone 1, subzone 2
-vscp-scan -i udp --info                                    # which nodes are there?
-vscp-info -i tcpip -H server -N 7 --mdf                    # node 7 and its MDF
-vscp-reg  -i tcpip -H server -N 7 write 0x10 0x55          # write a register
-vscp-gen  -i multicast -g 10 -n 1000                       # 1000 random events
-
-# TLS + AES-256/HMAC to a VSCP daemon, keys from the environment
-export VSCP_PASSWORD=secret VSCP_KEY=... VSCP_HMAC_KEY=...
-vscp-dump -i tcpip -H vscp.example.com --tls --ca-file ca.crt -e aes256 -f json
-
-# Encrypted UDP, plain datagrams dropped
-vscp-dump -i udp -e aes128 --require-encryption
+vscp-dump -i socketcan --device can0              # everything on the bus
+vscp-send -i socketcan --device can0 30 5 0 1 2   # CLASS1.CONTROL TurnOn, zone 1, subzone 2
+vscp-info -i tcpip -H server -N 7 --mdf           # node 7 and its MDF
 ```
-
-## Interfaces and security
-
-| `-i` | Transport | Security |
-| :--- | :-------- | :------- |
-| `tcpip` | VSCP tcp/ip link protocol, text or binary mode | TLS; AES-128/192/256 + HMAC-SHA256 in binary mode |
-| `udp` | VSCP over UDP | AES-128/192/256 + HMAC-SHA256 |
-| `multicast` | VSCP multicast | AES-128/192/256 + HMAC-SHA256 |
-| `ws1`, `ws2` | VSCP websocket protocols | TLS (wss); AES login authentication |
-| `mqtt` | VSCP over MQTT | TLS, client certificates |
-| `socketcan` | SocketCAN (Linux) | |
-| `canal` | CANAL Level I driver | |
-| `level2` | VSCP Level II driver | |
-
-See [Connecting and security](docs/connecting.md) for all options, JSON
-configuration files and `--print-config`. A configuration file given with
-`-c` can also store arguments for all tools and the command of each tool:
-
-```bash
-vscp-dump -c site.json        # interface, TLS and dump options all from site.json
-vscp-reg  -c site.json -N 8   # stored settings, node from the command line
-```
-
-## Download
-
-Every push builds the tools for each platform. Click a badge above to see the
-successful runs and download the artifact from a run page (GitHub only
-serves artifacts to signed in users):
-
-| Artifact | Platform |
-| :------- | :------- |
-| `vscp-cli-linux-x86_64` | Linux x86_64 (Debian 12, Ubuntu 22.04 and newer) |
-| `vscp-cli-linux-arm64` | Raspberry Pi OS 64-bit |
-| `vscp-cli-linux-armhf` | Raspberry Pi OS 32-bit |
-| `vscp-cli-macos-arm64` | macOS, Apple silicon |
-| `vscp-cli-windows-x64` | Windows x64 |
-
-Each artifact holds a `SHA256SUMS-<artifact>` file. Linux needs
-`libmosquitto1 libexpat1 libcurl4 libssl3`, macOS `brew install mosquitto
-openssl@3 expat`; the Windows zip has all DLLs. See [Install](docs/installing.md).
-
-## Build from source
-
-```bash
-sudo apt install build-essential cmake git libmosquitto-dev libexpat1-dev libssl-dev libcurl4-openssl-dev
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-sudo cmake --install build
-```
-
-macOS and Windows: see [Install](docs/installing.md#building-from-source).
 
 ## Documentation
 
-The [docs](docs/README.md) folder is a docsify site: overview, install,
-connecting and security, event formats and one page per tool. Every tool also
-has `--help`.
+The [docs](docs/README.md) folder is a docsify site: getting started,
+[install and download](docs/installing.md),
+[connecting and security](docs/connecting.md) (all interfaces, TLS,
+encryption, configuration files), [event formats](docs/formats.md) and one
+page per tool. Every tool also has `--help`.
+
+## Download
+
+Every push builds ready to run programs for Linux x86_64, Raspberry Pi
+(32/64-bit), macOS (Apple silicon) and Windows x64. Click a build badge above
+to download an artifact from a run page, or fetch and verify the newest
+builds of all platforms with
+[scripts/download-artifacts.sh](scripts/download-artifacts.sh). See
+[Install](docs/installing.md), which also covers
+[building from source](docs/installing.md#building-from-source).
 
 ## License
 

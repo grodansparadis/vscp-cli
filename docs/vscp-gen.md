@@ -52,3 +52,7 @@ vscp-gen -i multicast --level2 --echo
 # The same "random" sequence every time
 vscp-gen -i udp --seed 42 -n 100
 ```
+
+---
+
+[filename](./bottom_copyright.md ':include')

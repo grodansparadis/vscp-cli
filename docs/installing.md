@@ -22,6 +22,17 @@ only serves artifacts to signed in users). Each artifact holds an archive and a
 sha256sum -c SHA256SUMS-vscp-cli-linux-arm64
 ```
 
+Or download the newest builds of all platforms at once with the
+[download script](https://github.com/grodansparadis/vscp-cli/blob/main/scripts/download-artifacts.sh)
+in the repository, which also checks the checksums. It needs the
+[GitHub CLI](https://cli.github.com), signed in with `gh auth login`:
+
+```bash
+scripts/download-artifacts.sh                 # everything, into artifacts/
+scripts/download-artifacts.sh linux windows   # only these platforms
+scripts/download-artifacts.sh -b dev -o /tmp  # another branch and folder
+```
+
 ### Linux and Raspberry Pi
 
 The archive holds the files as installed below `/usr` (`usr/bin/vscp-*`,
@@ -111,3 +122,6 @@ copy C:\vcpkg\installed\x64-windows\bin\*.dll C:\vscp-cli\bin
 ```bash
 cmake -S . -B build -DFETCHCONTENT_SOURCE_DIR_VSCP=../vscp
 ```
+---
+
+[filename](./bottom_copyright.md ':include')

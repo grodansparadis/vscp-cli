@@ -82,3 +82,7 @@ vscp-reg -i udp -e aes128 -k $VSCP_KEY --hmac-key $VSCP_HMAC_KEY -N 1 write 0 1
 
 0 OK, 1 a register could not be written (read only), 2 command line error,
 3 no connection, 4 the node did not answer.
+
+---
+
+[filename](./bottom_copyright.md ':include')

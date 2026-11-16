@@ -58,3 +58,7 @@ them. With `--info` the GUID is read from the node's registers instead
 
 0 when at least one node was found, 4 when no node answered, 3 no
 connection.
+
+---
+
+[filename](./bottom_copyright.md ':include')

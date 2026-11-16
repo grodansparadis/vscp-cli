@@ -51,3 +51,7 @@ vscp-dump -i multicast -f csv --duration 60000 > minute.csv
 0 normally (Ctrl+C, `--count` reached, `--idle` or `--duration` passed).
 4 when `--count` events did not arrive before `--idle`/`--duration`. 3 when the
 connection failed or was lost.
+
+---
+
+[filename](./bottom_copyright.md ':include')

@@ -66,3 +66,7 @@ vscp-info -i tcpip -H server -N 7 --mdf-save node7.xml -j > node7.json
 
 0 OK, 1 the MDF could not be fetched or parsed, 2 command line error, 3 no
 connection, 4 the node did not answer.
+
+---
+
+[filename](./bottom_copyright.md ':include')
