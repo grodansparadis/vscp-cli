@@ -399,7 +399,8 @@ buildClientConfig(ConnectionOptions &o, json &cfg, std::string &error)
     else if (cfg.is_object()) {
       // Command line arguments stored in the file are not client settings
       cfg.erase("args");
-      for (const char *tool : { "vscp-send", "vscp-dump", "vscp-gen", "vscp-reg", "vscp-info", "vscp-scan" }) {
+      for (const char *tool : { "vscp-send", "vscp-dump", "vscp-gen", "vscp-reg", "vscp-info", "vscp-scan",
+                                "vscp-stream", "vscp-diagnostic", "vscp-error", "vscp-log" }) {
         cfg.erase(tool);
       }
     }

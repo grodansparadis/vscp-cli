@@ -24,6 +24,10 @@ Windows.
 | [vscp-reg](docs/vscp-reg.md) | Read, write and dump the registers of a node |
 | [vscp-info](docs/vscp-info.md) | GUID, MDF URL, firmware version etc. of a node; download and show its MDF |
 | [vscp-scan](docs/vscp-scan.md) | Find the nodes on a segment |
+| [vscp-stream](docs/vscp-stream.md) | Collect Stream Data as text or hexadecimal bytes |
+| [vscp-diagnostic](docs/vscp-diagnostic.md) | Show readable node diagnostics |
+| [vscp-error](docs/vscp-error.md) | Show readable node errors |
+| [vscp-log](docs/vscp-log.md) | Assemble node log messages with channel IDs and severity |
 
 ## Examples
 
@@ -31,6 +35,10 @@ Windows.
 vscp-dump -i socketcan --device can0              # everything on the bus
 vscp-send -i socketcan --device can0 30 5 0 1 2   # CLASS1.CONTROL TurnOn, zone 1, subzone 2
 vscp-info -i tcpip -H server -N 7 --mdf           # node 7 and its MDF
+vscp-stream -i socketcan --device can0 -N 7 -f hex
+vscp-diagnostic -i tcpip -H server --from -:07
+vscp-error -i socketcan --device can0 -N 7
+vscp-log -i tcpip -H server --from -:07 -l node7.log
 ```
 
 ## Documentation
@@ -44,12 +52,14 @@ page per tool. Every tool also has `--help`.
 ## Download
 
 Every push builds ready to run programs for Linux x86_64, Raspberry Pi
-(32/64-bit), macOS (Apple silicon) and Windows x64. Click a build badge above
+(32/64-bit), macOS (Apple silicon) and Windows x64; the Linux and
+Raspberry Pi builds include a Debian package. Click a build badge above
 to download an artifact from a run page, or fetch and verify the newest
 builds of all platforms with
 [scripts/download-artifacts.sh](scripts/download-artifacts.sh). See
 [Install](docs/installing.md), which also covers
-[building from source](docs/installing.md#building-from-source).
+[building from source](docs/installing.md#building-from-source) and
+[making packages](docs/installing.md#packages) with `cpack`.
 
 ## License
 

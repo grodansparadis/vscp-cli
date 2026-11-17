@@ -144,7 +144,8 @@ folder has a file for each interface. They are installed in
 The same file can also hold command line arguments, so a whole command can
 be kept in it. `args` is used by every tool, and a key with a tool's name
 (`vscp-send`, `vscp-dump`, `vscp-gen`, `vscp-reg`, `vscp-info`,
-`vscp-scan`) only by that tool. Both are arrays of arguments, exactly as they
+`vscp-scan`, `vscp-stream`, `vscp-diagnostic`, `vscp-error`, `vscp-log`)
+only by that tool. Both are arrays of arguments, exactly as they
 would be typed. The client settings then go in an `interface` object:
 
 ```json

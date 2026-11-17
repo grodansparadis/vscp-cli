@@ -19,7 +19,7 @@ jobs:
 
       # Debian bookworm is the base of Raspberry Pi OS bookworm, so the tools
       # run with the Pi's own libraries.
-      - name: Build, test and install
+      - name: Build, test, install and package
         run: |
           docker run --rm \
             --platform linux/arm64 \
@@ -29,13 +29,15 @@ jobs:
             bash -euc '
               apt-get update
               DEBIAN_FRONTEND=noninteractive apt-get install -y \
-                build-essential cmake git python3 pandoc \
+                build-essential cmake git python3 pandoc file \
                 libmosquitto-dev libexpat1-dev libssl-dev libcurl4-openssl-dev
               cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
               cmake --build build --parallel "$(nproc)"
               ctest --test-dir build --output-on-failure
               DESTDIR=/src/staging cmake --install build
               tar -C /src/staging -czf /src/vscp-cli-linux-arm64.tar.gz .
+              (cd build && cpack -G DEB)
+              cp build/vscp-cli_*.deb /src/
             '
 
       - name: Write SHA256SUMS
@@ -45,6 +47,7 @@ jobs:
         run: |
           bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-linux-arm64" <<'SHA256SUMS_PATTERNS'
           vscp-cli-linux-arm64.tar.gz
+          vscp-cli_*.deb
           SHA256SUMS_PATTERNS
 
       - uses: actions/upload-artifact@v4
@@ -52,5 +55,6 @@ jobs:
           name: vscp-cli-linux-arm64
           path: |
             vscp-cli-linux-arm64.tar.gz
+            vscp-cli_*.deb
             ${{ steps.sha256sums.outputs.file }}
           if-no-files-found: error

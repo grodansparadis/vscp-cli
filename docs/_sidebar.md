@@ -13,6 +13,10 @@
   * [vscp-reg](vscp-reg.md)
   * [vscp-info](vscp-info.md)
   * [vscp-scan](vscp-scan.md)
+  * [vscp-stream](vscp-stream.md)
+  * [vscp-diagnostic](vscp-diagnostic.md)
+  * [vscp-error](vscp-error.md)
+  * [vscp-log](vscp-log.md)
 
 * Other documentation
   * [VSCP specification](https://grodansparadis.github.io/vscp-doc-spec/#/)

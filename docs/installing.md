@@ -15,8 +15,9 @@ Every push to the repository builds the tools for these platforms:
 Open the [Actions](https://github.com/grodansparadis/vscp-cli/actions) page,
 pick a successful run of the platform's workflow (or click a build badge in
 the README) and download the artifact at the bottom of the run page (GitHub
-only serves artifacts to signed in users). Each artifact holds an archive and a
-`SHA256SUMS-<artifact>` file to check it with:
+only serves artifacts to signed in users). Each artifact holds an archive (on
+Linux also a Debian package) and a `SHA256SUMS-<artifact>` file to check it
+with:
 
 ```bash
 sha256sum -c SHA256SUMS-vscp-cli-linux-arm64
@@ -34,6 +35,15 @@ scripts/download-artifacts.sh -b dev -o /tmp  # another branch and folder
 ```
 
 ### Linux and Raspberry Pi
+
+The artifact also holds a Debian package, `vscp-cli_<version>_<arch>.deb`.
+It pulls in the libraries it needs and can be removed again with
+`sudo apt remove vscp-cli`:
+
+```bash
+sudo apt install ./vscp-cli_*_arm64.deb
+vscp-send --version
+```
 
 The archive holds the files as installed below `/usr` (`usr/bin/vscp-*`,
 the examples and the documentation). Install the libraries and unpack it:
@@ -90,6 +100,22 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 sudo cmake --install build
+```
+
+### Packages
+
+`cpack` in the build folder makes a Debian package and a `.tar.gz` archive
+on Linux, and only the archive on other systems. Configure with
+`-DCMAKE_INSTALL_PREFIX=/usr` so the archive has the same layout as the
+package. The package's library dependencies are detected automatically when
+`dpkg-shlibdeps` (from `dpkg-dev`) and `file` are installed:
+
+```bash
+sudo apt install dpkg-dev file
+cd build
+cpack                 # vscp-cli_<version>_<arch>.deb and vscp-cli-<version>-linux-<cpu>.tar.gz
+cpack -G DEB          # only the Debian package
+sudo apt install ./vscp-cli_*.deb
 ```
 
 ### macOS

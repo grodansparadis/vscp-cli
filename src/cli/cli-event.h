@@ -9,6 +9,7 @@
 #ifndef VSCPCLI_EVENT_H
 #define VSCPCLI_EVENT_H
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
 
@@ -79,6 +80,9 @@ initEvent(vscpEventEx &ex, uint8_t priority);
 */
 std::string
 dataHex(const vscpEventEx &ex);
+
+std::string
+dataHex(const uint8_t *data, size_t size);
 
 } // namespace vscpcli
 

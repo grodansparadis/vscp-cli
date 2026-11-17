@@ -12,6 +12,10 @@ Linux (also Raspberry Pi), macOS and Windows.
 | [vscp-reg](vscp-reg.md) | Read and write the registers of a node |
 | [vscp-info](vscp-info.md) | Show the GUID, MDF URL, firmware version etc. of a node, download its MDF |
 | [vscp-scan](vscp-scan.md) | Find the nodes on a segment |
+| [vscp-stream](vscp-stream.md) | Collect Stream Data as text or hexadecimal bytes |
+| [vscp-diagnostic](vscp-diagnostic.md) | Show readable CLASS1.DIAGNOSTIC events |
+| [vscp-error](vscp-error.md) | Show readable CLASS1.ERROR events |
+| [vscp-log](vscp-log.md) | Assemble CLASS1.LOG messages with channel IDs and severity |
 
 The ideas come from the `can-utils` tools for SocketCAN (`cansend`, `candump`,
 `cangen`): one small program per job, plain text output, useful exit codes.

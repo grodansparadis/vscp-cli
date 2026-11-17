@@ -60,10 +60,16 @@ parseTimeMode(const std::string &str, TimeMode &mode)
 std::string
 dataHex(const vscpEventEx &ex)
 {
+  return dataHex(ex.data, ex.sizeData);
+}
+
+std::string
+dataHex(const uint8_t *data, size_t size)
+{
   std::string s;
   char buf[4];
-  for (int i = 0; i < ex.sizeData; i++) {
-    snprintf(buf, sizeof(buf), "%02X", ex.data[i]);
+  for (size_t i = 0; i < size; i++) {
+    snprintf(buf, sizeof(buf), "%02X", data[i]);
     if (i) {
       s += ' ';
     }

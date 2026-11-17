@@ -58,7 +58,7 @@ endif()
 FetchContent_Declare(
   vscp
   GIT_REPOSITORY https://github.com/grodansparadis/vscp.git
-  GIT_TAG d75d4f5c6c097a1dca841b63727c79c522b701ce
+  GIT_TAG ec9a6befe14cd8f6a3dafa15044c33093e28979d
 )
 FetchContent_Declare(
   json
@@ -170,6 +170,7 @@ add_library(vscpcli-core STATIC
   src/cli/cli-args.cpp
   src/cli/cli-connection.cpp
   src/cli/cli-event.cpp
+  src/cli/cli-monitor.cpp
   src/cli/cli-node.cpp
   src/cli/cli-util.cpp
   ${VSCP_COMMON}/vscpremotetcpif.cpp
@@ -261,7 +262,8 @@ endif()
 
 # --- The tools ---
 
-set(VSCPCLI_TOOLS vscp-send vscp-dump vscp-gen vscp-reg vscp-info vscp-scan)
+set(VSCPCLI_TOOLS vscp-send vscp-dump vscp-gen vscp-reg vscp-info vscp-scan
+                  vscp-stream vscp-diagnostic vscp-error vscp-log)
 
 foreach(_tool IN LISTS VSCPCLI_TOOLS)
   add_executable(${_tool} src/${_tool}.cpp)
@@ -286,6 +288,28 @@ file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/vscp-gen-types.inc"
      CONTENT "${_vscp_gen_types}")
 target_include_directories(vscp-gen PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
+# Readable diagnostic/error labels come from the same pinned VSCP definitions.
+set(_vscp_type_header "${VSCP_COMMON}/vscp-type.h")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_vscp_type_header}")
+file(STRINGS "${_vscp_type_header}" _vscp_monitor_lines REGEX "^#define VSCP_TYPE_(DIAGNOSTIC|ERROR)_")
+set(_vscp_monitor_types "")
+foreach(_line IN LISTS _vscp_monitor_lines)
+  if(_line MATCHES "^#define VSCP_TYPE_(DIAGNOSTIC|ERROR)_[A-Z0-9_]+[ \t]+([0-9]+)[ \t]+/\\* *(.*)\\*/")
+    set(_kind "${CMAKE_MATCH_1}")
+    set(_type "${CMAKE_MATCH_2}")
+    string(STRIP "${CMAKE_MATCH_3}" _description)
+    string(REPLACE "\\" "\\\\" _description "${_description}")
+    string(REPLACE "\"" "\\\"" _description "${_description}")
+    string(APPEND _vscp_monitor_types "  {VSCP_CLASS1_${_kind}, ${_type}, \"${_description}\"},\n")
+  endif()
+endforeach()
+if(_vscp_monitor_types STREQUAL "")
+  message(FATAL_ERROR "The VSCP diagnostic/error description catalog is empty")
+endif()
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/vscp-monitor-types.inc"
+     CONTENT "${_vscp_monitor_types}")
+target_include_directories(vscpcli-core PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 install(TARGETS ${VSCPCLI_TOOLS} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Man pages (man/<tool>.1.md, converted with pandoc) in share/man/man1
@@ -294,6 +318,42 @@ vscp_add_man_pages(${PROJECT_SOURCE_DIR}/man)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/examples/ DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/examples)
 install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+# --- Packages (cpack): a .deb on Linux and a .tar.gz everywhere ---
+
+set(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+set(CPACK_PACKAGE_VENDOR "Grodans Paradis AB")
+set(CPACK_PACKAGE_CONTACT "Ake Hedman <info@grodansparadis.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_DESCRIPTION
+    "Send, dump and generate VSCP events, read and write registers, fetch node information, scan segments and monitor streams, diagnostics, errors and logs over every VSCP transport.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/grodansparadis/vscp-cli")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${PROJECT_SOURCE_DIR}/README.md")
+string(TOLOWER "${PROJECT_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}"
+       CPACK_PACKAGE_FILE_NAME)
+set(CPACK_STRIP_FILES ON)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(CPACK_GENERATOR "DEB;TGZ")
+else()
+  set(CPACK_GENERATOR "TGZ")
+endif()
+
+# Debian: vscp-cli_<version>_<arch>.deb, files below /usr
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+# Dependencies are detected with dpkg-shlibdeps, which CPack runs only with file(1)
+find_program(DPKG_SHLIBDEPS_EXECUTABLE dpkg-shlibdeps)
+find_program(FILE_EXECUTABLE file)
+if(DPKG_SHLIBDEPS_EXECUTABLE AND FILE_EXECUTABLE)
+  set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+else()
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "libmosquitto1, libexpat1, libcurl4, libssl3")
+endif()
+
+include(CPack)
 
 # --- Tests (ctest) ---
 
