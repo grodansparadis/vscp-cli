@@ -7,6 +7,8 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- vscp-gen can send just measurement events.
+- vscp-gen now send valied events.
 - Build against the latest vscp master (d75d4f5c6)
 - -c/--config can also store arguments: "args" for all tools and an array per tool (for example "vscp-send") with options and the command. The command line overrides them
 - Man pages for all six tools, converted from man/<tool>.1.md with pandoc when the tools are built and installed in share/man/man1

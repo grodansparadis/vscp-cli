@@ -251,6 +251,24 @@ foreach(_tool IN LISTS VSCPCLI_TOOLS)
   target_link_libraries(${_tool} PRIVATE vscpcli-core)
 endforeach()
 
+# Use the pinned VSCP catalog rather than maintaining a second class/type list.
+set(_vscp_type_catalog "${VSCP_COMMON}/vscp-hashtype.h")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_vscp_type_catalog}")
+file(STRINGS "${_vscp_type_catalog}" _vscp_type_lines REGEX "MAKE_CLASSTYPE_LONG")
+set(_vscp_gen_types "")
+foreach(_line IN LISTS _vscp_type_lines)
+  if(NOT _line MATCHES "RESERVED" AND
+     _line MATCHES "MAKE_CLASSTYPE_LONG\\(([0-9]+),([0-9]+)\\)")
+    string(APPEND _vscp_gen_types "  {${CMAKE_MATCH_1}, ${CMAKE_MATCH_2}},\n")
+  endif()
+endforeach()
+if(_vscp_gen_types STREQUAL "")
+  message(FATAL_ERROR "The VSCP class/type catalog is empty")
+endif()
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/vscp-gen-types.inc"
+     CONTENT "${_vscp_gen_types}")
+target_include_directories(vscp-gen PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 install(TARGETS ${VSCPCLI_TOOLS} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 # Man pages (man/<tool>.1.md, converted with pandoc) in share/man/man1

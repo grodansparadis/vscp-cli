@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import platform
+import struct
 import subprocess
 import sys
 import time
@@ -200,6 +201,27 @@ class ErrorTest(unittest.TestCase):
         r = self.expect(3, "-i", "tcpip", "-H", "127.0.0.1", "-P", "1", "--connect-timeout", "2000", "20", "3")
         self.assertIn("connect", r.stderr.lower())
 
+    def test_gen_invalid_pairs_and_sizes(self):
+        cases = [
+            ("-C", "3"),                           # Undefined class
+            ("-C", "20", "-T", "65535"),            # Undefined type in a defined class
+            ("-C", "10", "-T", "47"),               # Reserved measurement type
+            ("-C", "20", "-L", "9", "--level2"),    # Level II flag cannot enlarge Level I
+            ("-C", "20", "-D", ":000102030405060708"),
+            ("-C", "532", "-L", "15"),              # Missing encapsulated GUID
+            ("-C", "532", "-L", "25"),              # Encapsulated payload exceeds 8 bytes
+            ("-C", "1040", "-L", "513"),
+            ("-C", "1040", "-D", ":" + "00" * 513),
+            ("-C", "20", "-L", "3", "-D", "1,2"),  # Conflicting fixed size
+            ("--measurements", "-C", "20"),
+            ("--measurements", "-L", "4"),
+            ("--measurements", "-D", "i"),
+        ]
+        for args in cases:
+            with self.subTest(args=args):
+                self.expect(2, "-i", "tcpip", "-H", "127.0.0.1", "-P", "1",
+                            *args, tool_name="vscp-gen")
+
 
 @unittest.skipUnless(platform.system() == "Linux", "loopback broadcast test runs on Linux")
 class UdpLoopbackTest(unittest.TestCase):
@@ -235,7 +257,86 @@ class UdpLoopbackTest(unittest.TestCase):
         self.assertEqual(len(rows), 20, err)
         for row in rows:
             self.assertNotIn(int(row[1]), (0, 512, 1024))  # No protocol classes
+            self.assertIn(int(row[1]), {1, 2, 10, 11, 12, 13, 14, 15, 20, 30, 40, 50,
+                                       60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+                                       70, 71, 72, 73, 74, 85, 86, 87, 88, 89,
+                                       90, 95, 100, 102, 110, 120, 206, 212,
+                                       506, 508, 509, 510, 511})
             self.assertLessEqual(int(row[5]), 8)
+
+    def generate(self, *args, count=20):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        dump = start_dump(*common, "-f", "json", "-n", str(count), "--idle", "2000")
+        try:
+            r = run("vscp-gen", *common, "-n", str(count), "-g", "5", "--seed", "7", *args)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            out, err = dump.communicate(timeout=10)
+            self.assertEqual(dump.returncode, 0, err)
+            events = [json.loads(line) for line in out.splitlines()]
+            self.assertEqual(len(events), count, err)
+            return events
+        finally:
+            if dump.poll() is None:
+                dump.kill()
+                dump.communicate()
+
+    def test_gen_class_types_and_length_limits(self):
+        for cls in (1, 513):
+            with self.subTest(cls=cls):
+                events = self.generate("-C", str(cls))
+                for event in events:
+                    self.assertEqual(event["class"], cls)
+                    self.assertIn(event["type"], range(14))
+                    self.assertGreaterEqual(len(event["data"]), 16 if cls == 513 else 0)
+                    self.assertLessEqual(len(event["data"]), 24 if cls == 513 else 8)
+        for cls, length in ((20, 8), (532, 16), (532, 24), (1040, 512)):
+            with self.subTest(cls=cls, length=length):
+                events = self.generate("-C", str(cls), "-T", "0", "-L", str(length), count=2)
+                self.assertTrue(all(len(e["data"]) == length for e in events))
+
+    def test_gen_measurements(self):
+        guid = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:42"
+        selected = self.generate("-m", "-T", "6")
+        self.assertTrue(all(e["class"] in {10, 60, 65, 70} and e["type"] == 6 for e in selected))
+        for cls in (10, 60, 65, 70, 522, 572, 577, 582, 1040, 1060):
+            with self.subTest(cls=cls):
+                events = self.generate("--measurements", "-C", str(cls), "-T", "6", "--guid", guid)
+                values = []
+                for event in events:
+                    self.assertEqual((event["class"], event["type"]), (cls, 6))
+                    self.assertEqual(event["guid"].upper(), guid)
+                    data = bytes(event["data"])
+                    base = cls
+                    if 512 <= cls < 1024:
+                        self.assertEqual(data[:16], bytes.fromhex(guid.replace(":", "")))
+                        data = data[16:]
+                        base -= 512
+                    if base in (10, 65):
+                        if base == 65:
+                            self.assertEqual(data[:3], b"\0\0\0")
+                            data = data[3:]
+                        self.assertEqual(len(data), 4)
+                        self.assertEqual(data[:2], b"\x80\x82")
+                        value = int.from_bytes(data[2:], "big", signed=True) / 100
+                    elif base in (60, 70):
+                        value, = struct.unpack(">d" if base == 60 else ">f", data)
+                    else:
+                        self.assertEqual(data[:4], b"\0\0\0\0")
+                        if base == 1040:
+                            value = float(data[4:].rstrip(b"\0").decode("ascii"))
+                        else:
+                            value, = struct.unpack(">d", data[4:])
+                    self.assertGreaterEqual(value, 0)
+                    self.assertLessEqual(value, 100)
+                    values.append(value)
+                self.assertGreater(len(set(values)), 1)
+
+        first = self.generate("--measurements", "--level2")
+        second = self.generate("--measurements", "--level2")
+        sequence = lambda events: [(e["class"], e["type"], e["data"]) for e in events]
+        self.assertEqual(sequence(first), sequence(second))
+        self.assertTrue(all(e["class"] in {10, 60, 65, 70, 522, 572, 577, 582, 1040, 1060}
+                            and e["type"] not in (47, 48) for e in first))
 
 
 if __name__ == "__main__":

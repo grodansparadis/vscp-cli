@@ -19,6 +19,14 @@ CLASS2.LEVEL1.PROTOCOL (512) and CLASS2.PROTOCOL (1024) unless
 **\-\-allow-protocol** is given, as those events can change the configuration
 of real nodes.
 
+Only defined class/type pairs are generated, excluding reserved types. Fixed
+class/type and size constraints must match at least one pair, or the command
+fails before connecting. Level I payloads have 0-8 bytes, encapsulated Level I
+payloads (classes 512-1023) have 16-24 bytes including the GUID prefix, and native
+Level II payloads have 0-512 bytes. These limits apply even with **\-\-level2**.
+Fixed data and fixed length must agree. Outside measurement mode, payload
+semantics are not checked.
+
 # OPTIONS
 
 **-C**, **\-\-class** *N*|**r**
@@ -40,7 +48,17 @@ of real nodes.
 :   GUID of the events.
 
 **-2**, **\-\-level2**
-:   Random classes up to 1023 and up to 128 data bytes (default Level I).
+:   Include defined Level II classes up to 1060 (default Level I). A fixed
+    class can select Level II without this flag.
+
+**-m**, **\-\-measurements**
+:   Only encoded random measurements. Select class/type with **-C**/**-T**.
+    Supports classes 10, 60, 65, 70, 522, 572, 577, 582, 1040 and 1060;
+    random class selection includes Level II only with **\-\-level2**.
+    Values range from 0 to 100 in steps of 0.01, using the default unit
+    (Kelvin for temperature), sensor/index 0, zone 0 and subzone 0.
+    Encapsulated events prefix the measurement with the event GUID.
+    Cannot be combined with fixed **\-\-length** or explicit **\-\-data**.
 
 **\-\-allow-protocol**
 :   Allow the protocol classes.
@@ -172,9 +190,13 @@ Random Level I events, five a second:
 
     vscp-gen -i udp -g 0 -n 10000
 
-Temperature measurements with a counter as data:
+Random temperature measurements (Kelvin):
 
-    vscp-gen -i tcpip -H server -C 10 -T 6 -L 4 -D i -g 10
+    vscp-gen -i tcpip -H server --measurements -C 10 -T 6 -g 10
+
+Native Level II floating point pressure measurements:
+
+    vscp-gen -i udp --measurements -C 1060 -T 12
 
 # SEE ALSO
 
