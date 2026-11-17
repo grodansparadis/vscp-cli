@@ -7,13 +7,16 @@ Used by the "Update version" GitHub workflow on every push to main:
   * new month (or year)                          -> patch = 0
 
 The version lives in src/vscp-cli-version.h. CMake reads it from there for
-the project version.
+the project version, and docs/variables.xml is kept in sync.
 
 Usage:
-  tools/update_version.py [--header PATH] [--date YYYY-MM] [--check]
+  tools/update_version.py [--header PATH] [--variables PATH] [--date YYYY-MM] [--check]
 
-  --date   Use this year/month instead of the current UTC date (tests).
-  --check  Only validate the header, do not change it.
+  --header     Header to update; defaults to src/vscp-cli-version.h.
+  --variables  Documentation variables to update; defaults to docs/variables.xml
+               with the default header, or none with a custom header.
+  --date       Use this year/month instead of the current UTC date (tests).
+  --check      Only validate the header, do not change either file.
 """
 
 import argparse
@@ -21,8 +24,11 @@ import datetime
 import pathlib
 import re
 import sys
+import xml.etree.ElementTree as ET
 
-DEFAULT_HEADER = pathlib.Path(__file__).resolve().parent.parent / "src" / "vscp-cli-version.h"
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEFAULT_HEADER = PROJECT_ROOT / "src" / "vscp-cli-version.h"
+DEFAULT_VARIABLES = PROJECT_ROOT / "docs" / "variables.xml"
 
 FIELDS = ("YEAR", "MONTH", "PATCH")
 PATCH_MAX = 0xFFFF  # 16 bits in VSCPCLI_VERSION
@@ -34,6 +40,7 @@ def define_pattern(name):
 
 STR_PATTERN = re.compile(r'^(#define\s+VSCPCLI_VERSION_STR\s+)"[^"]*"(.*)$', re.MULTILINE)
 NUM_PATTERN = re.compile(r"^(#define\s+VSCPCLI_VERSION\s+)0x[0-9A-Fa-f]+UL(.*)$", re.MULTILINE)
+DOCUMENT_VERSION_PATTERN = re.compile(r"(<document-version>\s*)[^<]*?(\s*</document-version>)")
 
 
 def read_version(text):
@@ -74,9 +81,23 @@ def write_version(text, version):
     return text
 
 
+def write_document_version(text, version):
+    root = ET.fromstring(text)
+    if root.tag != "var" or len(root.findall("document-version")) != 1:
+        raise ValueError("A single document-version must be present in <var>")
+    year, month, patch = version
+    text, count = DOCUMENT_VERSION_PATTERN.subn(
+        lambda m: "%s%d.%d.%d%s" % (m.group(1), year, month, patch, m.group(2)), text
+    )
+    if count != 1:
+        raise ValueError("document-version must be a plain text element")
+    return text
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--header", type=pathlib.Path, default=DEFAULT_HEADER)
+    parser.add_argument("--variables", type=pathlib.Path, help="documentation variables XML to update")
     parser.add_argument("--date", help="YYYY-MM to use instead of the current UTC date")
     parser.add_argument("--check", action="store_true", help="only validate the header")
     args = parser.parse_args(argv)
@@ -93,7 +114,17 @@ def main(argv=None):
         date = datetime.datetime.now(datetime.timezone.utc)
     version = next_version(current, date.year % 100, date.month)
 
-    args.header.write_text(write_version(text, version), encoding="utf-8")
+    variables = args.variables
+    if variables is None and args.header.resolve() == DEFAULT_HEADER.resolve():
+        variables = DEFAULT_VARIABLES
+
+    updates = []
+    if variables is not None:
+        document = variables.read_text(encoding="utf-8")
+        updates.append((variables, write_document_version(document, version)))
+    updates.append((args.header, write_version(text, version)))
+    for path, updated in updates:
+        path.write_text(updated, encoding="utf-8")
     print("%d.%d.%d" % version)
     return 0
 
