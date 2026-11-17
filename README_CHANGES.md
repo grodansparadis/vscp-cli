@@ -8,6 +8,7 @@ tagged, rename **Unreleased** to the version and date, and start a new
 ## Unreleased
 
 - Render the documentation footer's creation time and software version from its XML variables.
+- Fix register-operation timeouts on ARM64.
 - Keep the documentation version synchronized with the automatic CLI version updates.
 - Accept VSCP GUID formats consistently in GUID options, filters and event strings, JSON and XML.
 - vscp-send accepts a standard VSCP event string as a single positional argument.
