@@ -88,6 +88,23 @@ foreach(dependency IN ITEMS vscp json spdlog mustache maddy)
     FetchContent_Populate(${dependency})
   endif()
 endforeach()
+
+# Avoid converting the epoch millisecond timestamp from double to uint32_t,
+# which is out of range and can leave register-operation timeouts stuck on ARM64.
+set(_vscp_helper "${vscp_SOURCE_DIR}/src/vscp/common/vscphelper.cpp")
+file(READ "${_vscp_helper}" _vscp_helper_content)
+set(_vscp_timestamp_unsafe "ms = round(s * 1000 + spec.tv_nsec / 1.0e6);")
+set(_vscp_timestamp_safe "ms = (uint32_t) ((uint64_t) s * 1000 + (uint64_t) spec.tv_nsec / 1000000);")
+string(FIND "${_vscp_helper_content}" "${_vscp_timestamp_unsafe}" _vscp_timestamp_unsafe_index)
+string(FIND "${_vscp_helper_content}" "${_vscp_timestamp_safe}" _vscp_timestamp_safe_index)
+if(NOT _vscp_timestamp_unsafe_index EQUAL -1)
+  string(REPLACE "${_vscp_timestamp_unsafe}" "${_vscp_timestamp_safe}"
+         _vscp_helper_content "${_vscp_helper_content}")
+  file(WRITE "${_vscp_helper}" "${_vscp_helper_content}")
+elseif(_vscp_timestamp_safe_index EQUAL -1)
+  message(FATAL_ERROR "Could not apply the ARM64-safe VSCP timestamp conversion")
+endif()
+
 cmake_policy(POP)
 
 set(CMAKE_CXX_STANDARD 17)
