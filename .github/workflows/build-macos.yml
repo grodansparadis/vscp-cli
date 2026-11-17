@@ -19,6 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Artifact and file names carry the version from src/vscp-cli-version.h
+      - name: Read version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^#define[[:space:]]*VSCPCLI_VERSION_STR[[:space:]]*"\([0-9.]*\)".*/\1/p' src/vscp-cli-version.h)
+          test -n "$version"
+          echo "VSCPCLI_VERSION=$version" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: brew install cjson expat mosquitto openssl@3 ninja
 
@@ -38,21 +46,21 @@ jobs:
       - name: Install
         run: |
           cmake --install build --prefix "${{ github.workspace }}/staging"
-          tar -C "${{ github.workspace }}/staging" -czf "${{ github.workspace }}/vscp-cli-macos-arm64.tar.gz" .
+          tar -C "${{ github.workspace }}/staging" -czf "${{ github.workspace }}/vscp-cli-${{ env.VSCPCLI_VERSION }}-macos-arm64.tar.gz" .
 
       - name: Write SHA256SUMS
         id: sha256sums
         continue-on-error: true
         shell: bash
         run: |
-          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-macos-arm64" <<'SHA256SUMS_PATTERNS'
-          vscp-cli-macos-arm64.tar.gz
+          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-${{ env.VSCPCLI_VERSION }}-macos-arm64" <<'SHA256SUMS_PATTERNS'
+          vscp-cli-${{ env.VSCPCLI_VERSION }}-macos-arm64.tar.gz
           SHA256SUMS_PATTERNS
 
       - uses: actions/upload-artifact@v4
         with:
-          name: vscp-cli-macos-arm64
+          name: vscp-cli-${{ env.VSCPCLI_VERSION }}-macos-arm64
           path: |
-            vscp-cli-macos-arm64.tar.gz
+            vscp-cli-${{ env.VSCPCLI_VERSION }}-macos-arm64.tar.gz
             ${{ steps.sha256sums.outputs.file }}
           if-no-files-found: error

@@ -16,6 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Artifact and file names carry the version from src/vscp-cli-version.h
+      - name: Read version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^#define[[:space:]]*VSCPCLI_VERSION_STR[[:space:]]*"\([0-9.]*\)".*/\1/p' src/vscp-cli-version.h)
+          test -n "$version"
+          echo "VSCPCLI_VERSION=$version" >> "$GITHUB_ENV"
+
       # Built on Debian bookworm so the tools run on Debian 12, Ubuntu 22.04
       # and newer with the distribution's own libraries.
       - name: Build, test, install and package
@@ -33,7 +41,7 @@ jobs:
               cmake --build build --parallel "$(nproc)"
               ctest --test-dir build --output-on-failure
               DESTDIR=/src/staging cmake --install build
-              tar -C /src/staging -czf /src/vscp-cli-linux-x86_64.tar.gz .
+              tar -C /src/staging -czf /src/vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-x86_64.tar.gz .
               (cd build && cpack -G DEB)
               cp build/vscp-cli_*.deb /src/
             '
@@ -43,16 +51,16 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-linux-x86_64" <<'SHA256SUMS_PATTERNS'
-          vscp-cli-linux-x86_64.tar.gz
+          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-x86_64" <<'SHA256SUMS_PATTERNS'
+          vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-x86_64.tar.gz
           vscp-cli_*.deb
           SHA256SUMS_PATTERNS
 
       - uses: actions/upload-artifact@v4
         with:
-          name: vscp-cli-linux-x86_64
+          name: vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-x86_64
           path: |
-            vscp-cli-linux-x86_64.tar.gz
+            vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-x86_64.tar.gz
             vscp-cli_*.deb
             ${{ steps.sha256sums.outputs.file }}
           if-no-files-found: error

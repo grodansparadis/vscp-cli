@@ -7,6 +7,7 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- Name every CI build artifact, archive and checksum file with the version, e.g. `vscp-cli-26.11.12-linux-x86_64.tar.gz`.
 - Add CPack packaging: `cpack` builds a Debian package (Linux) and a `.tar.gz` archive; the Linux and Raspberry Pi builds now also publish the `.deb`.
 - Add vscp-stream, vscp-diagnostic, vscp-error and vscp-log receivers with optional GUID/nickname filtering, readable output and log files.
 - Assemble stream/log fragments with a configurable 500 ms idle timeout and 1 MiB buffer limit; stream output supports text or hexadecimal bytes.

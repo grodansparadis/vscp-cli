@@ -21,6 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Artifact and file names carry the version from src/vscp-cli-version.h
+      - name: Read version
+        shell: bash
+        run: |
+          version=$(sed -n 's/^#define[[:space:]]*VSCPCLI_VERSION_STR[[:space:]]*"\([0-9.]*\)".*/\1/p' src/vscp-cli-version.h)
+          test -n "$version"
+          echo "VSCPCLI_VERSION=$version" >> "$GITHUB_ENV"
+
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
@@ -64,21 +72,21 @@ jobs:
 
       - name: Package
         shell: pwsh
-        run: Compress-Archive -Path "${{ github.workspace }}/staging/*" -DestinationPath "${{ github.workspace }}/vscp-cli-windows-x64.zip"
+        run: Compress-Archive -Path "${{ github.workspace }}/staging/*" -DestinationPath "${{ github.workspace }}/vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64.zip"
 
       - name: Write SHA256SUMS
         id: sha256sums
         continue-on-error: true
         shell: bash
         run: |
-          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-windows-x64" <<'SHA256SUMS_PATTERNS'
-          vscp-cli-windows-x64.zip
+          bash "${GITHUB_WORKSPACE//\\//}/.github/scripts/write-sha256sums.sh" "SHA256SUMS-vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64" <<'SHA256SUMS_PATTERNS'
+          vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64.zip
           SHA256SUMS_PATTERNS
 
       - uses: actions/upload-artifact@v4
         with:
-          name: vscp-cli-windows-x64
+          name: vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64
           path: |
-            vscp-cli-windows-x64.zip
+            vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64.zip
             ${{ steps.sha256sums.outputs.file }}
           if-no-files-found: error

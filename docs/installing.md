@@ -4,13 +4,17 @@
 
 Every push to the repository builds the tools for these platforms:
 
+`<version>` is the tools' version (year.month.patch, as shown by
+`--version`). The archive and checksum file in an artifact carry the same
+name.
+
 | Artifact | Platform |
 | :------- | :------- |
-| `vscp-cli-linux-x86_64` | Linux x86_64 (Debian 12, Ubuntu 22.04 and newer) |
-| `vscp-cli-linux-arm64` | Raspberry Pi OS 64-bit (bookworm) and other 64-bit ARM Linux |
-| `vscp-cli-linux-armhf` | Raspberry Pi OS 32-bit (bookworm) |
-| `vscp-cli-macos-arm64` | macOS on Apple silicon |
-| `vscp-cli-windows-x64` | Windows 10/11 x64 |
+| `vscp-cli-<version>-linux-x86_64` | Linux x86_64 (Debian 12, Ubuntu 22.04 and newer) |
+| `vscp-cli-<version>-linux-arm64` | Raspberry Pi OS 64-bit (bookworm) and other 64-bit ARM Linux |
+| `vscp-cli-<version>-linux-armhf` | Raspberry Pi OS 32-bit (bookworm) |
+| `vscp-cli-<version>-macos-arm64` | macOS on Apple silicon |
+| `vscp-cli-<version>-windows-x64` | Windows 10/11 x64 |
 
 Open the [Actions](https://github.com/grodansparadis/vscp-cli/actions) page,
 pick a successful run of the platform's workflow (or click a build badge in
@@ -20,7 +24,7 @@ Linux also a Debian package) and a `SHA256SUMS-<artifact>` file to check it
 with:
 
 ```bash
-sha256sum -c SHA256SUMS-vscp-cli-linux-arm64
+sha256sum -c SHA256SUMS-vscp-cli-*-linux-arm64
 ```
 
 Or download the newest builds of all platforms at once with the
@@ -50,7 +54,7 @@ the examples and the documentation). Install the libraries and unpack it:
 
 ```bash
 sudo apt install libmosquitto1 libexpat1 libcurl4 libssl3
-sudo tar -xzf vscp-cli-linux-arm64.tar.gz -C /
+sudo tar -xzf vscp-cli-*-linux-arm64.tar.gz -C /
 vscp-send --version
 ```
 
@@ -62,7 +66,7 @@ The tools use OpenSSL, libmosquitto and expat from Homebrew:
 
 ```bash
 brew install mosquitto openssl@3 expat
-mkdir -p ~/vscp-cli && tar -xzf vscp-cli-macos-arm64.tar.gz -C ~/vscp-cli
+mkdir -p ~/vscp-cli && tar -xzf vscp-cli-*-macos-arm64.tar.gz -C ~/vscp-cli
 xattr -dr com.apple.quarantine ~/vscp-cli
 export PATH="$HOME/vscp-cli/bin:$PATH"
 ```
