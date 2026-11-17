@@ -9,6 +9,7 @@
 #ifndef VSCPCLI_UTIL_H
 #define VSCPCLI_UTIL_H
 
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <string>
@@ -69,6 +70,26 @@ parseByteList(const std::string &str, std::vector<uint8_t> &bytes, std::string &
 */
 bool
 parseHexString(const std::string &str, std::vector<uint8_t> &bytes);
+
+using Guid = std::array<uint8_t, 16>;
+
+/*!
+  Parse a complete GUID in any supported VSCP format.
+*/
+bool
+parseGuid(const std::string &str, Guid &guid);
+
+/*!
+  Parse a node nickname or take the last byte of a GUID.
+*/
+bool
+parseNode(const std::string &str, uint8_t &nickname);
+
+/*!
+  Format a GUID as colon-separated hex bytes.
+*/
+std::string
+formatGuid(const Guid &guid);
 
 /*!
   Split a string on any of the characters in separators. Empty parts are

@@ -27,6 +27,9 @@ Level II payloads have 0-512 bytes. These limits apply even with **\-\-level2**.
 Fixed data and fixed length must agree. Outside measurement mode, payload
 semantics are not checked.
 
+GUID arguments accept colon-separated, UUID and compact VSCP forms such as
+**::01** (leading FF bytes) and **-:01** (leading zeroes).
+
 # OPTIONS
 
 **-C**, **\-\-class** *N*|**r**

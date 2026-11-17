@@ -147,7 +147,7 @@ main(int argc, char **argv)
   bool measurements  = false;
   bool dataSet       = false;
   uint32_t burst     = 1;
-  std::string guid;
+  Guid guid{};
   bool guidSet       = false;
   uint64_t seed      = 0;
   bool seedSet       = false;
@@ -190,11 +190,9 @@ main(int argc, char **argv)
            });
 
   p.option("guid", 0, "GUID", "GUID of the events (default all zero)", [&](const std::string &v, std::string &) {
-    std::vector<uint8_t> b;
-    if (!parseHexString(v, b) || (16 != b.size())) {
+    if (!parseGuid(v, guid)) {
       return false;
     }
-    guid    = v;
     guidSet = true;
     return true;
   });
@@ -376,7 +374,7 @@ main(int argc, char **argv)
       counter++;
 
       if (guidSet) {
-        vscp_setEventExGuidFromString(&ex, guid);
+        memcpy(ex.GUID, guid.data(), guid.size());
       }
       if (measurements && minLength(ex.vscp_class)) {
         memcpy(ex.data, ex.GUID, 16);

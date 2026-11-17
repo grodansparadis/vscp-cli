@@ -17,6 +17,7 @@
 #include <ctime>
 #include <thread>
 
+#include <guid.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
@@ -133,6 +134,110 @@ parseHexString(const std::string &s, std::vector<uint8_t> &bytes)
     bytes.push_back((uint8_t) std::stoul(hex.substr(i, 2), nullptr, 16));
   }
   return true;
+}
+
+static bool
+countGuidBytes(const std::string &groups, size_t &bytes)
+{
+  bytes = 0;
+  size_t digits = 0;
+  for (char c : groups) {
+    if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+      if (++digits > 32) {
+        return false;
+      }
+    }
+    else if (((':' == c) || ('-' == c) || (',' == c)) && digits) {
+      bytes += (digits + 1) / 2;
+      digits = 0;
+    }
+    else {
+      return false;
+    }
+  }
+  if (!groups.empty() && !digits) {
+    return false;
+  }
+  bytes += (digits + 1) / 2;
+  return bytes <= 16;
+}
+
+bool
+parseGuid(const std::string &str, Guid &guid)
+{
+  // The VSCP parser may accept a valid prefix followed by invalid text.
+  // Check the complete token before using it to convert the GUID.
+  std::string value;
+  for (char c : trim(str)) {
+    if ((' ' != c) && ('\t' != c)) {
+      value += c;
+    }
+  }
+  if (!value.empty() && (('{' == value.front()) || ('}' == value.back()))) {
+    if ((value.size() < 2) || ('{' != value.front()) || ('}' != value.back())) {
+      return false;
+    }
+    value = value.substr(1, value.size() - 2);
+  }
+
+  size_t firstBytes = 0;
+  size_t lastBytes = 0;
+  if (value.empty() || ("-" == value)) {
+    // Both forms denote the all-zero GUID.
+  }
+  else if ((0 == value.compare(0, 2, "::")) || (0 == value.compare(0, 2, "*:")) ||
+           (0 == value.compare(0, 2, "-:"))) {
+    if (!countGuidBytes(value.substr(2), lastBytes)) {
+      return false;
+    }
+  }
+  else {
+    size_t middle = value.find("::");
+    if (std::string::npos != middle) {
+      if (!countGuidBytes(value.substr(0, middle), firstBytes) ||
+          !countGuidBytes(value.substr(middle + 2), lastBytes) || (firstBytes + lastBytes > 16)) {
+        return false;
+      }
+    }
+    else if (!countGuidBytes(value, firstBytes) || (16 != firstBytes)) {
+      return false;
+    }
+  }
+
+  Guid parsed{};
+  if (VSCP_ERROR_SUCCESS != cguid::vscp_guid_parse(parsed.data(), value.c_str(), nullptr)) {
+    return false;
+  }
+  guid = parsed;
+  return true;
+}
+
+bool
+parseNode(const std::string &str, uint8_t &nickname)
+{
+  Guid guid;
+  // A 31- or 32-digit numeric GUID can also look like a decimal nickname.
+  if ((trim(str).size() >= 31) && parseGuid(str, guid)) {
+    nickname = guid.back();
+    return true;
+  }
+  uint64_t value;
+  if (parseUnsigned(str, 255, value)) {
+    nickname = static_cast<uint8_t>(value);
+    return true;
+  }
+  if (parseGuid(str, guid)) {
+    nickname = guid.back();
+    return true;
+  }
+  return false;
+}
+
+std::string
+formatGuid(const Guid &guid)
+{
+  cguid g(guid.data());
+  return g.toString();
 }
 
 bool

@@ -57,7 +57,7 @@ main(int argc, char **argv)
   ConnectionOptions conn;
 
   int node = -1;
-  std::string ifGuidStr;
+  Guid ifGuidBytes{};
   uint32_t timeout = REGISTER_DEFAULT_TIMEOUT;
   bool jsonOut     = false;
   bool showMdf     = false;
@@ -73,26 +73,16 @@ main(int argc, char **argv)
   p.group("Node");
 
   p.option("node", 'N', "NICKNAME", "Nickname of the node (0-255) or its GUID", [&](const std::string &v, std::string &) {
-    uint64_t n;
-    if (parseUnsigned(v, 255, n)) {
-      node = (int) n;
-      return true;
+    uint8_t nickname;
+    if (!parseNode(v, nickname)) {
+      return false;
     }
-    std::vector<uint8_t> b;
-    if (parseHexString(v, b) && (16 == b.size())) {
-      node = b[15];
-      return true;
-    }
-    return false;
+    node = nickname;
+    return true;
   });
 
   p.option("via", 0, "GUID", "GUID of the server interface the node is on", [&](const std::string &v, std::string &) {
-    std::vector<uint8_t> b;
-    if (!parseHexString(v, b) || (16 != b.size())) {
-      return false;
-    }
-    ifGuidStr = v;
-    return true;
+    return parseGuid(v, ifGuidBytes);
   });
 
   p.option("timeout", 0, "MS", "Timeout for register reads (default 2000)", [&](const std::string &v, std::string &) {
@@ -168,10 +158,7 @@ main(int argc, char **argv)
     return conn.configError ? EXIT_USAGE : EXIT_CONNECTION;
   }
 
-  cguid ifGuid;
-  if (!ifGuidStr.empty()) {
-    ifGuid.getFromString(ifGuidStr);
-  }
+  cguid ifGuid(ifGuidBytes.data());
 
   NodeInfo info;
   int rv = readNodeInfo(*client, (uint8_t) node, ifGuid, timeout, info);

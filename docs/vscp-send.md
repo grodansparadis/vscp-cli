@@ -4,6 +4,7 @@ Send VSCP events.
 
 ```
 vscp-send [OPTIONS] CLASS TYPE [DATA ...]
+vscp-send [OPTIONS] "HEAD,CLASS,TYPE,OBID,DATETIME,TIMESTAMP,GUID[,DATA...]"
 vscp-send [OPTIONS] -E EVENT [-E EVENT ...]
 vscp-send [OPTIONS] --file FILE|-
 ```
@@ -26,12 +27,24 @@ Plus the [connection options](connecting.md).
 
 Level I events (class below 512) have at most 8 data bytes; vscp-send refuses
 more unless `--no-check` is given. Level II events can have up to 512 bytes.
+An event string can be passed as a single positional argument or with `-E`;
+quote it to keep it together in the shell. Explicit `--guid` and `--priority`
+override the corresponding fields in the string.
+GUIDs accept all the [supported forms](formats.md#guids), including compact
+and UUID forms. Braces are required around comma-separated GUIDs inside an
+event string.
 
 ## Examples
 
 ```bash
 # CLASS1.INFORMATION ON, index 0, zone 1, subzone 2
 vscp-send -i udp 20 3 0 1 2
+
+# The same event in standard VSCP string form
+vscp-send -i udp "96,20,3,0,,0,-,0,1,2"
+
+# A compact GUID in an event string (braces protect its commas)
+vscp-send -i udp "96,20,3,0,,0,{::01,02},0,1,2"
 
 # 23 °C from sensor 1 (CLASS1.MEASUREMENT, temperature), highest priority
 vscp-send -i socketcan --device can0 -p 0 10 6 0x89 0x81 0x00 0xe6

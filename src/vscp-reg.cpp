@@ -86,7 +86,7 @@ main(int argc, char **argv)
   int node          = -1;
   uint16_t page     = 0;
   bool pageSet      = false;
-  std::string ifGuidStr;
+  Guid ifGuidBytes{};
   uint32_t timeout  = REGISTER_DEFAULT_TIMEOUT;
   bool jsonOut      = false;
   bool quiet        = false;
@@ -103,17 +103,12 @@ main(int argc, char **argv)
 
   p.option("node", 'N', "NICKNAME", "Nickname of the node (0-255), or its GUID (the last\nbyte is the nickname)",
            [&](const std::string &v, std::string &) {
-             uint64_t n;
-             if (parseUnsigned(v, 255, n)) {
-               node = (int) n;
-               return true;
+             uint8_t nickname;
+             if (!parseNode(v, nickname)) {
+               return false;
              }
-             std::vector<uint8_t> b;
-             if (parseHexString(v, b) && (16 == b.size())) {
-               node = b[15];
-               return true;
-             }
-             return false;
+             node = nickname;
+             return true;
            });
 
   p.option("page", 0, "N", "Register page for 0x00-0x7F (default 0)", [&](const std::string &v, std::string &) {
@@ -130,12 +125,7 @@ main(int argc, char **argv)
            "GUID of the server interface the node is on. Register\n"
            "events then go as CLASS2.LEVEL1.PROTOCOL to it.",
            [&](const std::string &v, std::string &) {
-             std::vector<uint8_t> b;
-             if (!parseHexString(v, b) || (16 != b.size())) {
-               return false;
-             }
-             ifGuidStr = v;
-             return true;
+             return parseGuid(v, ifGuidBytes);
            });
 
   p.option("timeout", 0, "MS", "Timeout for each register operation (default 2000)",
@@ -259,10 +249,7 @@ main(int argc, char **argv)
 
   cguid guidNode;
   guidNode.setLSB((uint8_t) node);
-  cguid guidIf;
-  if (!ifGuidStr.empty()) {
-    guidIf.getFromString(ifGuidStr);
-  }
+  cguid guidIf(ifGuidBytes.data());
 
   int result = EXIT_OK;
 

@@ -37,7 +37,7 @@ main(int argc, char **argv)
 {
   ConnectionOptions conn;
 
-  std::string guid;
+  Guid guid{};
   bool guidSet       = false;
   uint8_t priority   = 3;
   bool prioritySet   = false;
@@ -52,6 +52,7 @@ main(int argc, char **argv)
 
   ArgParser p("vscp-send",
               "[OPTIONS] CLASS TYPE [DATA ...]\n"
+              "       vscp-send [OPTIONS] \"HEAD,CLASS,TYPE,OBID,DATETIME,TIMESTAMP,GUID[,DATA...]\"\n"
               "       vscp-send [OPTIONS] -E EVENT [-E EVENT ...]\n"
               "       vscp-send [OPTIONS] --file FILE|-",
               "Send VSCP events. CLASS, TYPE and the data bytes are decimal or hex (0x..).\n"
@@ -61,12 +62,10 @@ main(int argc, char **argv)
 
   p.option("guid", 'g', "GUID", "GUID of the event (default all zero, i.e. the\ninterface GUID is used)",
            [&](const std::string &v, std::string &err) {
-             std::vector<uint8_t> b;
-             if (("-" != v) && (!parseHexString(v, b) || (16 != b.size()))) {
-               err = "use 16 hex bytes, e.g. FF:FF:FF:FF:FF:FF:FF:FE:00:00:00:00:00:00:00:01";
+             if (!parseGuid(v, guid)) {
+               err = "invalid GUID";
                return false;
              }
-             guid    = v;
              guidSet = true;
              return true;
            });
@@ -135,6 +134,7 @@ main(int argc, char **argv)
   p.epilog("Examples:\n"
            "  vscp-send -i udp 20 3 0 1 2                 CLASS1.INFORMATION ON, zone 1, subzone 2\n"
            "  vscp-send -i tcpip -H server -u admin --password secret 10 6 0x89 0x81 0x00 0xe6\n"
+           "  vscp-send -i udp \"96,20,3,0,,0,-,0,1,2\"\n"
            "  vscp-send -i tcpip --tls --ca-file ca.pem -E \"0,20,3,0,,0,-,0,1,2\"\n"
            "  vscp-send -i udp -e aes128 -k 000102030405060708090A0B0C0D0E0F 20 3 0 1 2\n"
            "  vscp-send -i mqtt -H broker 20 3 0 1 2\n"
@@ -163,7 +163,7 @@ main(int argc, char **argv)
 
   auto addEvent = [&](vscpEventEx &ex, const std::string &what) -> bool {
     if (guidSet) {
-      vscp_setEventExGuidFromString(&ex, guid);
+      memcpy(ex.GUID, guid.data(), guid.size());
     }
     if (prioritySet) {
       vscp_setEventExPriority(&ex, priority);
@@ -177,7 +177,17 @@ main(int argc, char **argv)
     return true;
   };
 
-  if (!pos.empty()) {
+  if ((pos.size() == 1) && (pos[0].find(',') != std::string::npos)) {
+    vscpEventEx ex;
+    if (!parseEventLine(pos[0], ex, error)) {
+      fprintf(stderr, "vscp-send: %s\n", error.c_str());
+      return EXIT_USAGE;
+    }
+    if (!addEvent(ex, "event")) {
+      return EXIT_USAGE;
+    }
+  }
+  else if (!pos.empty()) {
     if (pos.size() < 2) {
       fprintf(stderr, "vscp-send: give CLASS and TYPE (see --help)\n");
       return EXIT_USAGE;

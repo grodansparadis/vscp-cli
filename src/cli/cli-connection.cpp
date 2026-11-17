@@ -154,7 +154,11 @@ addConnectionOptions(ArgParser &p, ConnectionOptions &o)
   });
 
   p.option("if-guid", 0, "GUID", "Interface GUID (socketcan, level2)", [&o](const std::string &v, std::string &) {
-    o.guid = v;
+    Guid guid;
+    if (!parseGuid(v, guid)) {
+      return false;
+    }
+    o.guid = formatGuid(guid);
     return true;
   });
 

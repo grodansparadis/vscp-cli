@@ -32,6 +32,25 @@
 
 using namespace vscpcli;
 
+static bool
+normalizeFilterGuid(std::string &filter)
+{
+  size_t start = 0;
+  for (int i = 0; i < 3; ++i) {
+    start = filter.find(',', start);
+    if (std::string::npos == start) {
+      return true;
+    }
+    ++start;
+  }
+  Guid guid;
+  if (!parseGuid(filter.substr(start), guid)) {
+    return false;
+  }
+  filter.replace(start, std::string::npos, formatGuid(guid));
+  return true;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -47,7 +66,8 @@ main(int argc, char **argv)
   std::set<uint16_t> classes;
   std::set<uint16_t> types;
   std::string filterStr, maskStr;
-  std::vector<uint8_t> guidFilter;
+  Guid guidFilter{};
+  bool guidFilterSet = false;
   bool quiet = false;
 
   ArgParser p("vscp-dump", "[OPTIONS]", "Show received VSCP events, one per line, until Ctrl+C.");
@@ -100,16 +120,28 @@ main(int argc, char **argv)
   });
 
   p.option("from", 0, "GUID", "Only events from this GUID", [&](const std::string &v, std::string &) {
-    return parseHexString(v, guidFilter) && (16 == guidFilter.size());
-  });
-
-  p.option("filter", 0, "FILTER", "VSCP filter priority,class,type,GUID", [&](const std::string &v, std::string &) {
-    filterStr = v;
+    if (!parseGuid(v, guidFilter)) {
+      return false;
+    }
+    guidFilterSet = true;
     return true;
   });
 
-  p.option("mask", 0, "MASK", "VSCP mask priority,class,type,GUID", [&](const std::string &v, std::string &) {
+  p.option("filter", 0, "FILTER", "VSCP filter priority,class,type,GUID", [&](const std::string &v, std::string &err) {
+    filterStr = v;
+    if (!normalizeFilterGuid(filterStr)) {
+      err = "invalid GUID";
+      return false;
+    }
+    return true;
+  });
+
+  p.option("mask", 0, "MASK", "VSCP mask priority,class,type,GUID", [&](const std::string &v, std::string &err) {
     maskStr = v;
+    if (!normalizeFilterGuid(maskStr)) {
+      err = "invalid GUID";
+      return false;
+    }
     return true;
   });
 
@@ -257,7 +289,7 @@ main(int argc, char **argv)
     if (!types.empty() && !types.count(ex.vscp_type)) {
       continue;
     }
-    if (!guidFilter.empty() && memcmp(ex.GUID, guidFilter.data(), 16)) {
+    if (guidFilterSet && memcmp(ex.GUID, guidFilter.data(), guidFilter.size())) {
       continue;
     }
     if (useFilter && !vscp_doLevel2FilterEx(&ex, &filter)) {

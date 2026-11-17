@@ -24,6 +24,10 @@ A write is confirmed by the node answering with the new value. If it answers
 with another value, the register is read only or the value was limited, and
 **vscp-reg** says so.
 
+GUID arguments accept colon-separated, UUID and compact VSCP forms such as
+**::01** (leading FF bytes) and **-:01** (leading zeroes). A node GUID's
+last byte is used as its nickname.
+
 # OPTIONS
 
 **-N**, **\-\-node** *NICKNAME*

@@ -21,6 +21,9 @@ The VSCP firmware sends the GUID in the "who is there" answer least
 significant byte first and **vscp-scan** decodes it that way. With **\-\-info**
 the GUID is read from the node's registers instead.
 
+GUID arguments accept colon-separated, UUID and compact VSCP forms such as
+**::01** (leading FF bytes) and **-:01** (leading zeroes).
+
 # OPTIONS
 
 **-s**, **\-\-slow**

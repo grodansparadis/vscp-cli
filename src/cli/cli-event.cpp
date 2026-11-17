@@ -13,6 +13,7 @@
 
 #include <cstring>
 
+#include <expat.h>
 #include <nlohmann/json.hpp>
 
 #include <guid.h>
@@ -193,6 +194,114 @@ EventFormatter::format(const vscpEventEx &evIn)
   return out;
 }
 
+static bool
+normalizeStringEventGuid(std::string &line, std::string &error)
+{
+  size_t start = 0;
+  for (int i = 0; i < 6; ++i) {
+    start = line.find(',', start);
+    if (std::string::npos == start) {
+      return true; // Let the event parser report the missing fields.
+    }
+    ++start;
+  }
+
+  size_t end = line.find(',', start);
+  size_t first = line.find_first_not_of(" \t", start);
+  if ((std::string::npos != first) && ('{' == line[first])) {
+    size_t close = line.find('}', first + 1);
+    if (std::string::npos == close) {
+      error = "unclosed GUID braces in event";
+      return false;
+    }
+    end = line.find(',', close + 1);
+  }
+  Guid guid;
+  if (!parseGuid(line.substr(start, (std::string::npos == end) ? end : end - start), guid)) {
+    error = "invalid GUID in event";
+    return false;
+  }
+  line.replace(start, (std::string::npos == end) ? end : end - start, formatGuid(guid));
+  return true;
+}
+
+static bool
+setJsonEventGuid(const std::string &line, vscpEventEx &ex, std::string &error)
+{
+  auto json = nlohmann::json::parse(line, nullptr, false);
+  if (json.is_discarded()) {
+    error = "unable to read event JSON";
+    return false;
+  }
+  auto it = json.find("guid");
+  if (it == json.end()) {
+    it = json.find("vscpGuid");
+  }
+  if (it != json.end()) {
+    Guid guid;
+    if (!it->is_string() || !parseGuid(it->get<std::string>(), guid)) {
+      error = "invalid GUID in event";
+      return false;
+    }
+    memcpy(ex.GUID, guid.data(), guid.size());
+  }
+  return true;
+}
+
+struct XmlEventGuid {
+  bool rootSeen = false;
+  bool present = false;
+  bool valid = true;
+  Guid guid{};
+};
+
+static void XMLCALL
+readXmlEventGuid(void *userData, const XML_Char *name, const XML_Char **attributes)
+{
+  auto &state = *static_cast<XmlEventGuid *>(userData);
+  if (state.rootSeen) {
+    return;
+  }
+  state.rootSeen = true;
+  if (0 != strcmp(name, "event")) {
+    return;
+  }
+  for (int i = 0; attributes[i]; i += 2) {
+    if (0 == strcmp(attributes[i], "guid")) {
+      state.present = true;
+      state.valid = parseGuid(attributes[i + 1], state.guid);
+      break;
+    }
+  }
+}
+
+static bool
+setXmlEventGuid(const std::string &line, vscpEventEx &ex, std::string &error)
+{
+  XML_Parser parser = XML_ParserCreate("UTF-8");
+  if (!parser) {
+    error = "unable to create event XML parser";
+    return false;
+  }
+  XmlEventGuid state;
+  XML_SetUserData(parser, &state);
+  XML_SetStartElementHandler(parser, readXmlEventGuid);
+  bool ok = XML_STATUS_OK == XML_Parse(parser, line.data(), static_cast<int>(line.size()), 1);
+  XML_ParserFree(parser);
+  if (!ok) {
+    error = "unable to read event XML GUID";
+    return false;
+  }
+  if (!state.valid) {
+    error = "invalid GUID in event";
+    return false;
+  }
+  if (state.present) {
+    memcpy(ex.GUID, state.guid.data(), state.guid.size());
+  }
+  return true;
+}
+
 bool
 parseEventLine(const std::string &lineIn, vscpEventEx &ex, std::string &error)
 {
@@ -207,11 +316,20 @@ parseEventLine(const std::string &lineIn, vscpEventEx &ex, std::string &error)
   bool ok;
   if ('{' == line[0]) {
     ok = vscp_convertJSONToEventEx(&ex, line);
+    if (ok && !setJsonEventGuid(line, ex, error)) {
+      return false;
+    }
   }
   else if ('<' == line[0]) {
     ok = vscp_convertXMLToEventEx(&ex, line);
+    if (ok && !setXmlEventGuid(line, ex, error)) {
+      return false;
+    }
   }
   else {
+    if (!normalizeStringEventGuid(line, error)) {
+      return false;
+    }
     ok = vscp_convertStringToEventEx(&ex, line);
   }
 

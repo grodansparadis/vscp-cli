@@ -45,6 +45,8 @@ so it does not show up in the process list or the shell history.
 | `--connect-timeout MS` | all | How long to wait for the connection (default 5000) |
 | `--response-timeout MS` | tcpip, ws1, ws2, socketcan | How long to wait for a server answer (default 3000) |
 
+All GUID options accept the [VSCP GUID formats](formats.md#guids).
+
 ## Security
 
 ### TLS (tcpip, ws1, ws2, mqtt)

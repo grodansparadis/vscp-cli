@@ -10,6 +10,8 @@ vscp-send - send VSCP events
 
 **vscp-send** [*options*] *CLASS* *TYPE* [*DATA* ...]
 
+**vscp-send** [*options*] *VSCP-STRING*
+
 **vscp-send** [*options*] **-E** *EVENT* [**-E** *EVENT* ...]
 
 **vscp-send** [*options*] **\-\-file** *FILE*|**-**
@@ -24,6 +26,15 @@ Events can also be given in the VSCP string format
 (head,class,type,obid,datetime,timestamp,GUID,data...), as JSON or as XML,
 on the command line or from a file. **vscp-dump -f string** and **-f json**
 write files that can be sent again.
+A single VSCP string can be supplied directly as a positional argument or
+with **-E**. Quote it as one shell argument; explicit **\-\-guid** and
+**\-\-priority** override its GUID and priority.
+
+GUIDs accept colon-separated, UUID, grouped and compact forms, including
+**::01** (leading FF bytes), **\*:01** (also leading FF) and **-:01**
+(leading zeroes). A middle or trailing **::** fills zero bytes; **-** or an
+empty GUID means all zeroes. Braces are optional except around GUIDs
+containing commas in an event string.
 
 # OPTIONS
 
@@ -162,6 +173,14 @@ These options are the same for all the VSCP command line tools.
 CLASS1.INFORMATION ON, index 0, zone 1, subzone 2, over UDP:
 
     vscp-send -i udp 20 3 0 1 2
+
+The same event in standard VSCP string form:
+
+    vscp-send -i udp "96,20,3,0,,0,-,0,1,2"
+
+An event with a comma-grouped compact GUID:
+
+    vscp-send -i udp "96,20,3,0,,0,{::01,02},0,1,2"
 
 23 °C (CLASS1.MEASUREMENT temperature) on a CAN bus at the highest priority:
 

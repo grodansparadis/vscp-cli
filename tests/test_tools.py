@@ -18,6 +18,7 @@ import platform
 import struct
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 
@@ -27,6 +28,31 @@ TOOLS = ["vscp-send", "vscp-dump", "vscp-gen", "vscp-reg", "vscp-info", "vscp-sc
 
 KEY128 = "000102030405060708090A0B0C0D0E0F"
 HMAC = "1F1E1D1C1B1A191817161514131211100F0E0D0C0B0A09080706050403020100"
+
+ZERO_GUID = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+FF_GUID = "FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF"
+EXTENDED_GUID = "FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:01:02"
+GUID_FORMS = [
+    ("", ZERO_GUID),
+    ("-", ZERO_GUID),
+    ("-:", ZERO_GUID),
+    ("::", FF_GUID),
+    ("*:", FF_GUID),
+    ("::01:02", EXTENDED_GUID),
+    ("*:0102", EXTENDED_GUID),
+    ("{::01,02}", EXTENDED_GUID),
+    ("-:01:02", "00:00:00:00:00:00:00:00:00:00:00:00:00:00:01:02"),
+    ("01:02::FE:FF", "01:02:00:00:00:00:00:00:00:00:00:00:00:00:FE:FF"),
+    ("01:02::", "01:02:00:00:00:00:00:00:00:00:00:00:00:00:00:00"),
+    ("{::0102:03aa:44:01:30}", "FF:FF:FF:FF:FF:FF:FF:FF:FF:01:02:03:AA:44:01:30"),
+    ("FFEEDDCC-BBAA-9988-7766-554433221100", "FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00"),
+    ("ffeeddccbbaa99887766554433221100", "FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00"),
+    ("0" * 30 + "1", "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:10"),
+    ("FFEEDD:CCBBAA99-8877,665544332211:00", "FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00"),
+    ("FF EE DD CC BB AA 99 88 77 66 55 44 33 22 11 00",
+     "FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00"),
+    ("::12345", "FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:12:34:50"),
+]
 
 
 def tool(name):
@@ -129,6 +155,23 @@ class ConfigTest(unittest.TestCase):
         c = config("-i", "level2", "--driver", "/x/l2.so", "--driver-config", "/x/l2.json")
         self.assertEqual((c["path-driver"], c["path-config"]), ("/x/l2.so", "/x/l2.json"))
 
+    def test_guid_options_accept_supported_forms(self):
+        options = [("vscp-send", "--guid"), ("vscp-gen", "--guid"), ("vscp-dump", "--from"),
+                   ("vscp-reg", "--node"), ("vscp-info", "--node"),
+                   ("vscp-reg", "--via"), ("vscp-info", "--via"), ("vscp-scan", "--via")]
+        for value, expected in GUID_FORMS:
+            with self.subTest(value=value, option="--if-guid"):
+                c = config("-i", "level2", "--driver", "/x/l2.so", "--if-guid", value)
+                self.assertEqual(c["guid"], expected)
+            for name, option in options:
+                with self.subTest(value=value, tool=name, option=option):
+                    r = run(name, "-i", "udp", "--print-config", option, value)
+                    self.assertEqual(r.returncode, 0, r.stderr)
+            for option in ("--filter", "--mask"):
+                with self.subTest(value=value, option=option):
+                    r = run("vscp-dump", "-i", "udp", "--print-config", option, "0,20,3," + value)
+                    self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_config_file_and_set(self):
         path = os.path.join(BINDIR, "test-cfg.json")
         with open(path, "w") as f:
@@ -201,6 +244,35 @@ class ErrorTest(unittest.TestCase):
         r = self.expect(3, "-i", "tcpip", "-H", "127.0.0.1", "-P", "1", "--connect-timeout", "2000", "20", "3")
         self.assertIn("connect", r.stderr.lower())
 
+    def test_send_positional_event_errors(self):
+        self.expect(2, "-i", "udp", "96,20,3")
+        self.expect(2, "-i", "udp", "96,20,3,0,,0,-,1,2,3,4,5,6,7,8,9")
+        self.expect(2, "-i", "udp", "96,20,3,0,,0,-,1", "2")
+
+    def test_invalid_guid_inputs(self):
+        invalid = ["not-a-guid", "::xyz", "-:01:zz", "01:02::GG", "01::02::03",
+                   "{::01", "00:01", "00000000000000000000000000000000extra"]
+        options = [("vscp-send", "--guid"), ("vscp-gen", "--guid"), ("vscp-dump", "--from"),
+                   ("vscp-reg", "--node"), ("vscp-info", "--node"),
+                   ("vscp-reg", "--via"), ("vscp-info", "--via"), ("vscp-scan", "--via"),
+                   ("vscp-send", "--if-guid")]
+        for value in invalid:
+            for name, option in options:
+                with self.subTest(value=value, tool=name, option=option):
+                    self.expect(2, "-i", "udp", option, value, "--print-config", tool_name=name)
+            for option in ("--filter", "--mask"):
+                with self.subTest(value=value, option=option):
+                    self.expect(2, "-i", "udp", option, "0,20,3," + value, "--print-config",
+                                tool_name="vscp-dump")
+        for event in ("96,20,3,0,,0,::xyz,1",
+                      '{"class":20,"type":3,"guid":"::xyz"}',
+                      '{"class":20,"type":3,"guid":123}',
+                      '<event class="20" type="3" guid="::xyz"/>',
+                      "96,20,3,0,,0,{::01,02,1"):
+            with self.subTest(event=event):
+                r = self.expect(2, "-i", "tcpip", "-H", "127.0.0.1", "-P", "1", "-E", event)
+                self.assertIn("GUID", r.stderr)
+
     def test_gen_invalid_pairs_and_sizes(self):
         cases = [
             ("-C", "3"),                           # Undefined class
@@ -246,6 +318,171 @@ class UdpLoopbackTest(unittest.TestCase):
 
     def test_encrypted(self):
         self.roundtrip("-e", "aes128", "-k", KEY128, "--hmac-key", HMAC, "--require-encryption")
+
+    def test_send_positional_event(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        guid = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:42"
+        dump = start_dump(*common, "-f", "json", "-n", "3", "--idle", "2000")
+        try:
+            preserved = run("vscp-send", *common, "64,10,6,0,,0," + guid + ",0x80,0x82,1,2")
+            self.assertEqual(preserved.returncode, 0, preserved.stderr)
+            r = run("vscp-send", *common, "-p", "5", "-g", guid,
+                    "96,20,3,0,,0,-,0,0x01,2", "-E", "96,20,4,0,,0,-")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            out, err = dump.communicate(timeout=10)
+            self.assertEqual(dump.returncode, 0, err)
+            events = [json.loads(line) for line in out.splitlines()]
+            self.assertEqual([(e["class"], e["type"], e["data"]) for e in events],
+                             [(10, 6, [0x80, 0x82, 1, 2]), (20, 3, [0, 1, 2]), (20, 4, [])])
+            self.assertEqual((events[0]["head"] >> 5) & 7, 2)
+            self.assertEqual(events[0]["guid"].upper(), guid)
+            for event in events[1:]:
+                self.assertEqual((event["head"] >> 5) & 7, 5)
+                self.assertEqual(event["guid"].upper(), guid)
+        finally:
+            if dump.poll() is None:
+                dump.kill()
+                dump.communicate()
+
+    def test_guid_event_and_generator_options(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        for value, expected in GUID_FORMS:
+            with self.subTest(value=value, tool="vscp-send"):
+                r = run("vscp-send", *common, "--echo", "--guid", value, "20", "3")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn(expected, r.stdout)
+            with self.subTest(value=value, tool="vscp-gen"):
+                r = run("vscp-gen", *common, "--echo", "--guid", value, "-C", "20", "-T", "3",
+                        "-L", "0", "-n", "1", "-g", "0")
+                self.assertEqual(r.returncode, 0, r.stderr)
+                self.assertIn(expected, r.stdout)
+
+    def test_guid_event_formats(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        args = []
+        expected = []
+        for value, guid in GUID_FORMS:
+            string_guid = ("{" + value + "}") if "," in value and not value.startswith("{") else value
+            formats = [
+                "96,20,3,0,,0," + string_guid + ",0xAA,0xBB",
+                json.dumps({"class": 20, "type": 3, "guid": value, "data": [0xAA, 0xBB]}),
+                '<event class="20" type="3" guid="' + value + '" data="0xAA,0xBB"/>',
+            ]
+            for event in formats:
+                args.extend(["-E", event])
+                expected.append(guid)
+        r = run("vscp-send", *common, "--echo", *args)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(len(lines), len(expected))
+        for line, guid in zip(lines, expected):
+            self.assertIn(guid + "  [2] AA BB", line)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "events.txt")
+            with open(path, "w") as f:
+                f.write("96,20,3,0,,0,{::01,02},1\n")
+            r = run("vscp-send", *common, "--echo", "96,20,3,0,,0,-:01:02,2", "--file", path)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("00:00:00:00:00:00:00:00:00:00:00:00:00:00:01:02  [1] 02", r.stdout)
+            self.assertIn(EXTENDED_GUID + "  [1] 01", r.stdout)
+
+        r = run("vscp-send", *common, "--echo",
+                "-E", "96,20,3,0,,0,::01,02",
+                "-E", '{"vscpClass":20,"vscpType":3,"vscpGuid":"-:01:02","vscpData":[3]}',
+                "-E", '<event class="20" type="3" guid="&#42;&#58;0102" data="4"/>')
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(len(lines), 3)
+        self.assertIn("FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:01  [1] 02", lines[0])
+        self.assertIn("00:00:00:00:00:00:00:00:00:00:00:00:00:00:01:02  [1] 03", lines[1])
+        self.assertIn(EXTENDED_GUID + "  [1] 04", lines[2])
+
+    def test_guid_event_formats_on_wire(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        dump = start_dump(*common, "-f", "json", "-n", "4", "--idle", "2000")
+        try:
+            r = run("vscp-send", *common, "-d", "5", "96,20,3,0,,0,{::01,02},1",
+                    "-E", "96,20,3,0,,0,FFEEDDCC-BBAA-9988-7766-554433221100,2",
+                    "-E", '{"class":20,"type":3,"guid":"*:0102","data":[3]}',
+                    "-E", '<event class="20" type="3" guid="-:01:02" data="4"/>')
+            self.assertEqual(r.returncode, 0, r.stderr)
+            out, err = dump.communicate(timeout=10)
+            self.assertEqual(dump.returncode, 0, err)
+            events = [json.loads(line) for line in out.splitlines()]
+            self.assertEqual([(e["guid"].upper(), e["data"]) for e in events], [
+                (EXTENDED_GUID, [1]),
+                ("FF:EE:DD:CC:BB:AA:99:88:77:66:55:44:33:22:11:00", [2]),
+                (EXTENDED_GUID, [3]),
+                ("00:00:00:00:00:00:00:00:00:00:00:00:00:00:01:02", [4]),
+            ])
+        finally:
+            if dump.poll() is None:
+                dump.kill()
+                dump.communicate()
+
+    def test_guid_filters_and_measurement_prefix(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        selectors = [
+            ["--from", "*:0102"],
+            ["--filter", "0,20,3,::01,02", "--mask", "0,0xffff,0xffff,::"],
+        ]
+        for selector in selectors:
+            with self.subTest(selector=selector):
+                dump = start_dump(*common, "-f", "json", "-n", "1", "--idle", "2000", *selector)
+                try:
+                    wrong = run("vscp-send", *common, "--guid", "::01:03", "20", "3", "2")
+                    right = run("vscp-send", *common, "--guid", "{::01,02}", "20", "3", "1")
+                    self.assertEqual((wrong.returncode, right.returncode), (0, 0), wrong.stderr + right.stderr)
+                    out, err = dump.communicate(timeout=10)
+                    self.assertEqual(dump.returncode, 0, err)
+                    event = json.loads(out.strip())
+                    self.assertEqual((event["guid"].upper(), event["data"]), (EXTENDED_GUID, [1]))
+                finally:
+                    if dump.poll() is None:
+                        dump.kill()
+                        dump.communicate()
+
+        dump = start_dump(*common, "-f", "json", "-n", "1", "--idle", "2000", "--from", "::01:02")
+        try:
+            r = run("vscp-gen", *common, "--measurements", "--guid", "{::01,02}",
+                    "-C", "522", "-T", "6", "-n", "1", "-g", "0")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            out, err = dump.communicate(timeout=10)
+            self.assertEqual(dump.returncode, 0, err)
+            event = json.loads(out.strip())
+            self.assertEqual(event["guid"].upper(), EXTENDED_GUID)
+            self.assertEqual(event["data"][:16], list(bytes.fromhex(EXTENDED_GUID.replace(":", ""))))
+        finally:
+            if dump.poll() is None:
+                dump.kill()
+                dump.communicate()
+
+    def test_guid_node_and_via_on_wire(self):
+        common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]
+        cases = [
+            ("vscp-reg", ["-N", "00000000000000000000000000000042", "read", "0x80"], 0x42),
+            ("vscp-reg", ["-N", "0" * 30 + "1", "read", "0x80"], 0x10),
+            ("vscp-reg", ["-N", "42", "read", "0x80"], 42),
+            ("vscp-info", ["-N", "-:42"], 0x42),
+            ("vscp-scan", [], 0xFF),
+        ]
+        for name, args, nickname in cases:
+            with self.subTest(tool=name, node=nickname):
+                dump = start_dump(*common, "-f", "json", "-n", "1", "--idle", "2000")
+                try:
+                    r = run(name, *common, "--via", "{::01,02}", "--timeout", "100", *args)
+                    self.assertEqual(r.returncode, 4, r.stderr)
+                    out, err = dump.communicate(timeout=10)
+                    self.assertEqual(dump.returncode, 0, err)
+                    event = json.loads(out.strip())
+                    self.assertEqual(event["class"], 512)
+                    self.assertEqual(event["data"][:16], list(bytes.fromhex(EXTENDED_GUID.replace(":", ""))))
+                    self.assertEqual(event["data"][16], nickname)
+                finally:
+                    if dump.poll() is None:
+                        dump.kill()
+                        dump.communicate()
 
     def test_gen(self):
         common = ["-i", "udp", "-H", "127.255.255.255", "-P", self.PORT]

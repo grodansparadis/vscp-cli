@@ -17,6 +17,10 @@ MDF URL, firmware version, manufacturer ids, bootloader and more. With
 **\-\-mdf** it downloads the node's MDF (Module Description File) over http
 or https and shows the module, manufacturer and registers it describes.
 
+GUID arguments accept colon-separated, UUID and compact VSCP forms such as
+**::01** (leading FF bytes) and **-:01** (leading zeroes). A node GUID's
+last byte is used as its nickname.
+
 # OPTIONS
 
 **-N**, **\-\-node** *NICKNAME*

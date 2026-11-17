@@ -16,6 +16,9 @@ vscp-dump - show received VSCP events
 line, until interrupted. The output can be text, VSCP string, JSON, XML or CSV;
 string and JSON lines can be sent again with **vscp-send \-\-file**.
 
+GUID arguments accept colon-separated, UUID and compact VSCP forms such as
+**::01** (leading FF bytes) and **-:01** (leading zeroes).
+
 # OPTIONS
 
 **-f**, **\-\-format** *FMT*

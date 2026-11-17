@@ -90,7 +90,7 @@ main(int argc, char **argv)
   uint32_t delay   = 5;
   bool info        = false;
   bool jsonOut     = false;
-  std::string ifGuidStr;
+  Guid ifGuidBytes{};
 
   ArgParser p("vscp-scan", "[OPTIONS]",
               "Find the VSCP nodes on a segment. The default fast scan sends one \"who is\n"
@@ -131,12 +131,7 @@ main(int argc, char **argv)
            });
 
   p.option("via", 0, "GUID", "GUID of the server interface to scan behind", [&](const std::string &v, std::string &) {
-    std::vector<uint8_t> b;
-    if (!parseHexString(v, b) || (16 != b.size())) {
-      return false;
-    }
-    ifGuidStr = v;
-    return true;
+    return parseGuid(v, ifGuidBytes);
   });
 
   p.group("Output");
@@ -191,10 +186,7 @@ main(int argc, char **argv)
     return conn.configError ? EXIT_USAGE : EXIT_CONNECTION;
   }
 
-  cguid ifGuid;
-  if (!ifGuidStr.empty()) {
-    ifGuid.getFromString(ifGuidStr);
-  }
+  cguid ifGuid(ifGuidBytes.data());
   const bool via      = !ifGuid.isNULL();
   const uint8_t off   = via ? 16 : 0;
   const uint16_t pcls = via ? VSCP_CLASS2_LEVEL1_PROTOCOL : VSCP_CLASS1_PROTOCOL;

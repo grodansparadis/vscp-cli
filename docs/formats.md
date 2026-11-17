@@ -6,8 +6,31 @@ Classes, types, register numbers and data bytes are decimal (`20`) or hex
 (`0x14`). Data can be separate arguments (`0 1 2`), one comma separated list
 (`0,1,0x02`) or a run of hex pairs after a colon (`:000102`).
 
-GUIDs are 16 hex bytes separated by colons:
-`FF:FF:FF:FF:FF:FF:FF:FE:00:00:00:00:00:00:00:01`.
+## GUIDs
+
+GUID inputs accept the VSCP parser's formats, including 16 colon-separated
+hex bytes, 32 hex digits, UUID notation, and groups separated by colons,
+hyphens or commas. Braces are optional, and hex digits are case-insensitive.
+For example, these all identify the same GUID:
+
+```
+FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:FF:01:02
+FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFF0102
+::01:02
+*:0102
+{::01,02}
+```
+
+Leading `::` or `*:` fills the omitted bytes with `FF`; `-:` fills them
+with `00`. A middle or trailing `::` fills omitted bytes with `00`.
+`-` or an empty GUID means all zeroes. Quote forms containing `*` or braces
+to prevent shell expansion.
+
+In a VSCP event string, enclose a GUID containing commas in braces, for
+example `96,20,3,0,,0,{::01,02},1`. Without braces, commas separate the GUID
+from the event data. `vscp-reg` and `vscp-info` use the last GUID byte as
+the node nickname; a 31- or 32-digit numeric GUID is interpreted as a GUID,
+not a decimal nickname.
 
 ## Output formats (vscp-dump -f)
 
@@ -60,12 +83,18 @@ time,head,class,type,obid,guid,size,data
 | `z` | Seconds since the first event |
 | `n` | No time stamp |
 
-## Input formats (vscp-send -E and --file)
+## Input formats (vscp-send, -E and --file)
 
 `vscp-send` reads events in the string, JSON or XML format, so the output of
 `vscp-dump -f string`, `-f json` or `-f xml` can be sent again. In the string
 format a GUID of `-` means all zero (the interface fills in its GUID). Empty
 date/time fields are fine.
+
+A single VSCP string can also be passed directly as a positional argument:
+
+```bash
+vscp-send -i udp "96,20,3,0,,0,-,0,1,2"
+```
 
 ```
 # A comment

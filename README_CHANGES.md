@@ -7,6 +7,8 @@ tagged, rename **Unreleased** to the version and date, and start a new
 
 ## Unreleased
 
+- Accept VSCP GUID formats consistently in GUID options, filters and event strings, JSON and XML.
+- vscp-send accepts a standard VSCP event string as a single positional argument.
 - vscp-gen can send just measurement events.
 - vscp-gen now send valied events.
 - Build against the latest vscp master (d75d4f5c6)
