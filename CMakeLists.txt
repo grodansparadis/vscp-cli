@@ -290,4 +290,9 @@ if(BUILD_TESTING)
              COMMAND ${Python3_EXECUTABLE} -B ${PROJECT_SOURCE_DIR}/tests/test_tools.py
                      --bindir $<TARGET_FILE_DIR:vscp-send>)
   endif()
+  find_program(NODE_EXECUTABLE NAMES node nodejs)
+  if(NODE_EXECUTABLE)
+    add_test(NAME docs_variables
+             COMMAND ${NODE_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/test_docs_variables.js)
+  endif()
 endif()
