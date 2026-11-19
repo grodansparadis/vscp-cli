@@ -19,7 +19,7 @@ jobs:
     env:
       TRIPLET: x64-windows
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Artifact and file names carry the version from src/vscp-cli-version.h
       - name: Read version
@@ -83,7 +83,7 @@ jobs:
           vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64.zip
           SHA256SUMS_PATTERNS
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: vscp-cli-${{ env.VSCPCLI_VERSION }}-windows-x64
           path: |

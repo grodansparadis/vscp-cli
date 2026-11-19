@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Artifact and file names carry the version from src/vscp-cli-version.h
       - name: Read version
@@ -58,7 +58,7 @@ jobs:
           vscp-cli_*.deb
           SHA256SUMS_PATTERNS
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: vscp-cli-${{ env.VSCPCLI_VERSION }}-linux-arm64
           path: |
